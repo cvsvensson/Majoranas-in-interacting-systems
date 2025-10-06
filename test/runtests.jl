@@ -56,7 +56,7 @@ using Random: seed!
     gs_even = vecs[:, n+1]
     odd_eigenstates, even_eigenstates = vecs.blocks
     overlaps1 = odd_eigenstates' * γgsBmin[1:n, n+1:2n] * even_eigenstates
-    overlaps2 = odd_eigenstates' * 1im * γgsBmax[1:n, n+1:2n] * even_eigenstates # check the sign
+    overlaps2 = odd_eigenstates' * 1im * γgsBmax[1:n, n+1:2n] * even_eigenstates 
     δEs = map(es -> -(es...), Base.product(vals[1:n], vals[n+1:2n]))
     ε = heff.effops.ε
 
