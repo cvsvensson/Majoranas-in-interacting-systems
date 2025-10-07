@@ -49,17 +49,16 @@ fig_aps = with_theme(theme_aps(markers=[:circle, :diamond, :utriangle], linestyl
     rowsize!(fig.layout, 1, Relative(0.45))
     gb = fig[1, 1] = GridLayout()
     yscale = identity
-    ax = Axis(gb[1, 1]; yscale, xlabel=L"n", limits)
+    ax = Axis(gb[1, 1]; yscale, xlabel=L"j", limits, xticks=1:N)
     text!(fig.scene, 0.002, 0.92; text=LaTeXString("(a)"), space=:relative)
     text!(fig.scene, 0.002, 0.5; text=LaTeXString("(b)"), space=:relative)
     scatterlines!(ax, 1:N, map(d -> d.LFmin, wavefunction_data), label=L"||\gamma_{j}||_2", marker=:circle, linestyle=:dash)
     scatterlines!(ax, 1:N, map(d -> d.LFmax, wavefunction_data), label=L"||\tilde{\gamma}_{j}||_2", marker=:diamond, linestyle=:dot)
     scatterlines!(ax, 1:N, map(d -> d.MR, wavefunction_data), label=L"M_j", marker=:utriangle, linestyle=:solid)
-    # scatterlines!(ax, 1:N, map(d -> d.LD, wavefunction_data), label=L"||(\gamma \tilde{\gamma})_{n}||_1", marker=:utriangle, linestyle=:solid)
     axislegend(ax, position=(0.5, 1.5), labelsize=9)
     rowgap!(fig.layout, 1, Relative(0.02))
     fig
 end
 ##
-save(plotsdir("int_kitaev_phase_diagram_and_wavefunctions_$(N)_aps_mp.pdf"), fig_aps, px_per_unit=40)
+save(plotsdir("int_kitaev_phase_diagram_and_wavefunctions_$(N).pdf"), fig_aps, px_per_unit=40)
 #save(plotsdir("int_kitaev_phase_diagram_and_wavefunctions_$(N)_aps_mp.png"), fig_aps, px_per_unit=10)

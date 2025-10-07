@@ -37,7 +37,6 @@ end
 function canonicalize_hamiltonians(hamiltonians, spaces)
     @unpack hS, hS0, hB, hRB = hamiltonians
     @unpack HS, HB, HR, HSB, HRB = spaces
-    # diffHR = HS.ham - HS0.ham
     diffhR = partial_trace(hS - hS0, HS => HR) * dim(HR) / dim(HS)
     hS = hS - embed(diffhR, HR => HS)
     hRB = hRB + embed(diffhR, HR => HRB)
@@ -117,13 +116,15 @@ struct LowRankMatrix{N,T} <: AbstractMatrix{T}
     vecs1::NTuple{N,Vector{T}}
     vecs2::NTuple{N,Vector{T}}
 end
-function LowRankMatrix(s, v1, v2)
-    T = promote_type(eltype(s), eltype(v1), eltype(v2))
-    N = length(v1)
-    N == length(v2) || throw(ArgumentError("Number of vectors must be the same"))
-    length(unique(length.(v1))) == 1 || throw(ArgumentError("All vecs1 must have the same length"))
-    length(unique(length.(v2))) == 1 || throw(ArgumentError("All vecs2 must have the same length"))
-    LowRankMatrix{N,T}(convert(Vector{T}, s), convert(NTuple{N,Vector{T}}, v1), convert(NTuple{N,Vector{T}}, v2))
+function LowRankMatrix(s, vs1, vs2)
+    T1 = promote_type(eltype.(vs1)...)
+    T2 = promote_type(eltype.(vs2)...)
+    T = promote_type(eltype(s), T1, T2)
+    N = length(vs1)
+    N == length(vs2) || throw(ArgumentError("Number of vectors must be the same"))
+    length(unique(length.(vs1))) == 1 || throw(ArgumentError("All vecs1 must have the same length"))
+    length(unique(length.(vs2))) == 1 || throw(ArgumentError("All vecs2 must have the same length"))
+    LowRankMatrix{N,T}(convert(Vector{T}, s), convert(NTuple{N,Vector{T}}, vs1), convert(NTuple{N,Vector{T}}, vs2))
 end
 Base.getindex(m::LowRankMatrix, i::Int, j::Int) = sum(s * v1[i] * conj(v2[j]) for (s, v1, v2) in zip(m.scales, m.vecs1, m.vecs2))
 Base.size(m::LowRankMatrix) = (length(first(m.vecs1)), length(first(m.vecs2)))

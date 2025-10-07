@@ -10,7 +10,7 @@ function calculate_ground_state_properties(ham, HS, HR, q, gauge=FrobeniusGauge(
 end
 
 ##
-N = 10
+N = 8
 qn = ParityConservation()
 HS = hilbert_space(1:N, qn)
 HR = hilbert_space(1:div(N, 2), qn)

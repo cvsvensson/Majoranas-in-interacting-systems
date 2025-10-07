@@ -80,7 +80,7 @@ hRBsym = tc * f[r]' * f[b] + Δc * f[r] * f[b] + hc +
 hRB = matrix_representation(hRBsym, spaces.HRB)
 ϵs = 2 * λ * range(-1, 1, 200)
 reduced = reduced_majoranas_properties(gs_even, gs_odd, HS, HR, FrobeniusGauge(); q=2)
-energy_splitting_data = Folds.map(ϵs) do ϵ
+@time energy_splitting_data = Folds.map(ϵs) do ϵ
     hB = matrix_representation(ϵ * f[only(B)]' * f[only(B)], spaces.HB)
     hamiltonians = (; hS0=hS, hS=hS, hB=hB, hRB=hRB)
     calculate_bounds(reduced, hamiltonians, spaces, 2)
@@ -92,12 +92,12 @@ npbounds = [d.np_bound[1, 1] for d in energy_splitting_data]
 pbounds = [d.p_bound for d in energy_splitting_data]
 energy_splitting_fig = with_theme(theme_aps()) do
     fig = Figure(size=150 .* (1.5, 1), figure_padding=5)
-    ax = Axis(fig[1, 1]; xlabel=L"\varepsilon_d/ λ", limits=(nothing, (0, 1.1 * pbounds[1] / normalization)))#, ylabel=L"\delta E / \max{\delta E}")
-    lines!(ax, ϵs ./ λ, pbounds ./ normalization, label=LaTeXString("Eq. (27)"); linestyle=:dot, color=:black)
-    lines!(ax, ϵs ./ λ, npbounds ./ normalization, label=LaTeXString("Eq. (26)"); linestyle=:dash, color=:black)
-    lines!(ax, ϵs ./ λ, δEs ./ normalization, label=L"|\delta E| / λ"; linestyle=nothing, color=:black)
-    axislegend(ax)
+    ax = Axis(fig[1, 1]; xlabel=L"\varepsilon_d/ λ", limits=(nothing, (0, 1.1 * pbounds[1] / normalization)))
+    lines!(ax, ϵs ./ λ, pbounds ./ normalization, label=LaTeXString("Eq. (26)"); linestyle=:dot, color=:black)
+    lines!(ax, ϵs ./ λ, npbounds ./ normalization, label=LaTeXString("Eq. (25)"); linestyle=:dash, color=:black)
+    lines!(ax, ϵs ./ λ, δEs ./ normalization , label=L"|\delta E| / λ"; linestyle=nothing, color=:black)
+    axislegend(ax; position=(0.9, 0.75))
     fig
 end
 ##
-save(plotsdir("energy_splitting_comparison.pdf"), energy_splitting_fig, px_per_unit=40)
+save(plotsdir("energy_splitting_comparison_$N.pdf"), energy_splitting_fig, px_per_unit=40)

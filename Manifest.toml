@@ -2,7 +2,7 @@
 
 julia_version = "1.11.7"
 manifest_format = "2.0"
-project_hash = "79bb50cb21b505551e6b41aa82f01ef26d07cfbe"
+project_hash = "03461a85e9741286219d235e8d75e908dea91a32"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -461,9 +461,9 @@ version = "1.0.2"
 
 [[deps.FermionicHilbertSpaces]]
 deps = ["BitPermutations", "Dictionaries", "FillArrays", "LinearAlgebra", "NonCommutativeProducts", "OrderedCollections", "PrecompileTools", "SparseArrays", "SplitApplyCombine", "TestItems", "TupleTools"]
-git-tree-sha1 = "075ca1cfa36ba98d8b3e26895188106bbfe46f84"
+git-tree-sha1 = "108af716804f7b2585c64bf5b541c6a18976b5e3"
 uuid = "82e5dd95-83c3-46b2-a303-acc930c81756"
-version = "0.8.0"
+version = "0.8.1"
 
 [[deps.FileIO]]
 deps = ["Pkg", "Requires", "UUIDs"]
