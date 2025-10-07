@@ -1,6 +1,7 @@
 using DrWatson
 @quickactivate :ManybodyMajoranas
-using LaTeXStrings, LinearAlgebra, Folds
+using LinearAlgebra, Folds
+
 function calculate_ground_state_properties(ham, HS, HR, q, gauge=FrobeniusGauge(); kwargs...)
     vals, vecs = ground_states_arnoldi(ham, HS)
     gs_odd = vcat(vecs[1], zero(vecs[2]))
@@ -8,9 +9,8 @@ function calculate_ground_state_properties(ham, HS, HR, q, gauge=FrobeniusGauge(
     (; reduced_majoranas_properties(gs_even, gs_odd, HS, HR, gauge; q, kwargs...)..., vals)
 end
 
-include("parameters.jl")
 ##
-N = 6
+N = 10
 qn = ParityConservation()
 HS = hilbert_space(1:N, qn)
 HR = hilbert_space(1:div(N, 2), qn)
@@ -32,4 +32,4 @@ Us = range(-3, 5, 200)
     calculate_ground_state_properties(ham, HS, HR, 2, gauge)[[:LFmin, :LFmax, :LD, :θmin, :θmax, :vals, :MR, :cR]]
 end;
 ## Save data
-wsave(datadir("int_kitaev_phase_diagram_frob_$N.jld2"), Dict("bounds" => bounds, "Us" => Us, "δμs" => δμs))
+wsave(datadir("int_kitaev_phase_diagram_$N.jld2"), Dict("bounds" => bounds, "Us" => Us, "δμs" => δμs))

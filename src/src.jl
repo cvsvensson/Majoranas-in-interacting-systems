@@ -158,21 +158,20 @@ function optimal_gauge(oeR, ::EigGauge, q)
 end
 
 function reduced_majoranas_properties(e, o, H::AbstractHilbertSpace, Hsub::AbstractHilbertSpace, gauge=FrobeniusGauge(); q=1, opt_kwargs=Dict())
-    oe = Rank1Matrix(o, e)
+    eo = Rank1Matrix(e, o)
     ee = Rank1Matrix(e, e)
     oo = Rank1Matrix(o, o)
-    oeR = partial_trace(oe, H => Hsub)
+    eoR = partial_trace(eo, H => Hsub)
     eeR = partial_trace(ee, H => Hsub)
     ooR = partial_trace(oo, H => Hsub)
-    θmin = optimal_gauge(oeR, gauge, q, opt_kwargs...)
+    θmin = optimal_gauge(eoR, gauge, q, opt_kwargs...)
     θmax = θmin + pi / 2
-    γmin, γmax = (exp(1im * θmin) * oe + hc, exp(1im * θmax) * oe + hc)
-    γRmin, γRmax = (exp(1im * θmin) * oeR + hc, exp(1im * θmax) * oeR + hc)
+    γRmin, γRmax = (exp(1im * θmin) * eoR + hc, exp(1im * θmax) * eoR + hc)
     LFmin, LFmax = map(γ -> norm(svdvals(γ), q), (γRmin, γRmax))
     MR = sqrt(abs(tr(γRmax^2 - γRmin^2))^2 + 4 * abs(tr(γRmax * γRmin))^2) / abs(tr(γRmax^2 + γRmin^2))
     cR = abs(tr(γRmax^2 + γRmin^2)) / 2
     LD = norm(svdvals(ooR - eeR), q)
-    return (; LFmin, LFmax, γmin, γmax, LD, θmin, θmax, γRmin, γRmax, MR, cR)
+    return (; LFmin, LFmax, LD, θmin, θmax, γRmin, γRmax, MR, cR)
 end
 
 blockdiagonal(m, H::SymmetricFockHilbertSpace) = blockdiagonal(m, H.symmetry)
@@ -206,7 +205,7 @@ end
 
 
 hopping(t, f1, f2) = t * f1'f2 + hc
-pairing(Δ, f1, f2) = Δ * f2 * f1 + hc
+pairing(Δ, f1, f2) = Δ * f1' * f2' + hc
 numberop(f) = f'f
 coulomb(f1, f2) = f1' * f1 * f2' * f2
 _kitaev_2site(f1, f2; t, Δ, U) = hopping(t, f1, f2) + U * coulomb(f1, f2) + pairing(Δ, f1, f2)

@@ -2,16 +2,14 @@ using DrWatson
 @quickactivate :ManybodyMajoranas
 using LaTeXStrings, UnPack, CairoMakie, MakiePublication
 
-include("parameters.jl")
 ##
-N = 6
+N = 8
 qn = ParityConservation()
 HS = hilbert_space(1:N, qn)
-HR = hilbert_space(1:div(N, 2), qn)
 @fermions f
 
 ## Makie plot
-@unpack bounds, Us, δμs = wload(datadir("int_kitaev_phase_diagram_frob_$N.jld2"))
+@unpack bounds, Us, δμs = wload(datadir("int_kitaev_phase_diagram_$N.jld2"))
 ## Pick a point in the phase diagram and plot the majorana wavefunctions
 HS = hilbert_space(1:N, qn)
 params = example_point_parameters(HS)
@@ -24,7 +22,7 @@ gs_odd = vcat(vecs[1], zero(vecs[2]))
 gs_even = vcat(zero(vecs[1]), vecs[2])
 q = 2
 gauge = EigGauge()
-wavefunction_data = map(R -> reduced_majoranas_properties(gs_even, gs_odd, HS, hilbert_space([R]), gauge; q), 1:N)
+@time wavefunction_data = map(R -> reduced_majoranas_properties(gs_even, gs_odd, HS, hilbert_space([R]), gauge; q), 1:N)
 
 
 ##
@@ -54,9 +52,9 @@ fig_aps = with_theme(theme_aps(markers=[:circle, :diamond, :utriangle], linestyl
     ax = Axis(gb[1, 1]; yscale, xlabel=L"n", limits)
     text!(fig.scene, 0.002, 0.92; text=LaTeXString("(a)"), space=:relative)
     text!(fig.scene, 0.002, 0.5; text=LaTeXString("(b)"), space=:relative)
-    scatterlines!(ax, 1:N, map(d -> d.LFmin, wavefunction_data), label=L"||\gamma_{n}||_2", marker=:circle, linestyle=:dash)
-    scatterlines!(ax, 1:N, map(d -> d.LFmax, wavefunction_data), label=L"||\tilde{\gamma}_{n}||_2", marker=:diamond, linestyle=:dot)
-    scatterlines!(ax, 1:N, map(d -> d.MR, wavefunction_data), label=L"M_n", marker=:utriangle, linestyle=:solid)
+    scatterlines!(ax, 1:N, map(d -> d.LFmin, wavefunction_data), label=L"||\gamma_{j}||_2", marker=:circle, linestyle=:dash)
+    scatterlines!(ax, 1:N, map(d -> d.LFmax, wavefunction_data), label=L"||\tilde{\gamma}_{j}||_2", marker=:diamond, linestyle=:dot)
+    scatterlines!(ax, 1:N, map(d -> d.MR, wavefunction_data), label=L"M_j", marker=:utriangle, linestyle=:solid)
     # scatterlines!(ax, 1:N, map(d -> d.LD, wavefunction_data), label=L"||(\gamma \tilde{\gamma})_{n}||_1", marker=:utriangle, linestyle=:solid)
     axislegend(ax, position=(0.5, 1.5), labelsize=9)
     rowgap!(fig.layout, 1, Relative(0.02))

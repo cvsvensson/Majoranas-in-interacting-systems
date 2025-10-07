@@ -46,7 +46,6 @@ function analytical_bounds(reduced, OEBnorms, overlaps1, pairs)
     complicated = (reduced.LD + 2 * reduced.LFmin * OEBnorms[pairs[1]]) / (sqrt(2) * overlaps1[pairs[1]])
     return (; simple, complicated)
 end
-include("parameters.jl")
 ##
 @fermions f
 N = 8
@@ -101,4 +100,4 @@ energy_splitting_fig = with_theme(theme_aps()) do
     fig
 end
 ##
-save(plotsdir("energy_splitting_comparison_dΔ.pdf"), energy_splitting_fig, px_per_unit=40)
+save(plotsdir("energy_splitting_comparison.pdf"), energy_splitting_fig, px_per_unit=40)
