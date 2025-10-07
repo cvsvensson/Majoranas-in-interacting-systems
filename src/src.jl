@@ -111,12 +111,26 @@ function random_hamiltonian(H::SymmetricFockHilbertSpace, β=2)
     Hermitian(cat(mats..., dims=(1, 2)))
 end
 
-struct Rank1Matrix{T} <: AbstractMatrix{T}
-    vec1::Vector{T}
-    vec2::Vector{T}
+
+struct LowRankMatrix{N,T} <: AbstractMatrix{T}
+    scales::Vector{T}
+    vecs1::NTuple{N,Vector{T}}
+    vecs2::NTuple{N,Vector{T}}
 end
-Base.getindex(m::Rank1Matrix, i::Int, j::Int) = m.vec1[i] * conj(m.vec2[j])
-Base.size(m::Rank1Matrix) = (length(m.vec1), length(m.vec2))
+function LowRankMatrix(s, v1, v2)
+    T = promote_type(eltype(s), eltype(v1), eltype(v2))
+    N = length(v1)
+    N == length(v2) || throw(ArgumentError("Number of vectors must be the same"))
+    length(unique(length.(v1))) == 1 || throw(ArgumentError("All vecs1 must have the same length"))
+    length(unique(length.(v2))) == 1 || throw(ArgumentError("All vecs2 must have the same length"))
+    LowRankMatrix{N,T}(convert(Vector{T}, s), convert(NTuple{N,Vector{T}}, v1), convert(NTuple{N,Vector{T}}, v2))
+end
+Base.getindex(m::LowRankMatrix, i::Int, j::Int) = sum(s * v1[i] * conj(v2[j]) for (s, v1, v2) in zip(m.scales, m.vecs1, m.vecs2))
+Base.size(m::LowRankMatrix) = (length(first(m.vecs1)), length(first(m.vecs2)))
+Rank1Matrix(v1, v2) = LowRankMatrix([one(eltype(v1))], (v1,), (v2,))
+Base.:+(m1::LowRankMatrix{N1,T1}, m2::LowRankMatrix{N2,T2}) where {N1,T1,N2,T2} = LowRankMatrix{N1 + N2,promote_type(T1, T2)}(vcat(m1.scales, m2.scales), (m1.vecs1..., m2.vecs1...), (m1.vecs2..., m2.vecs2...))
+Base.:*(a::Number, m::LowRankMatrix) = LowRankMatrix(a * m.scales, m.vecs1, m.vecs2)
+Base.adjoint(m::LowRankMatrix{N,T}) where {N,T} = LowRankMatrix{N,T}(conj(m.scales), m.vecs2, m.vecs1)
 
 function abs_sign_mat!(m::Hermitian{T}; cutoff=10eps(real(T))) where T
     vals, vecs = eigen!(m)
@@ -166,12 +180,13 @@ function reduced_majoranas_properties(e, o, H::AbstractHilbertSpace, Hsub::Abstr
     ooR = partial_trace(oo, H => Hsub)
     θmin = optimal_gauge(eoR, gauge, q, opt_kwargs...)
     θmax = θmin + pi / 2
+    γmin, γmax = (exp(1im * θmin) * eo + hc, exp(1im * θmax) * eo + hc)
     γRmin, γRmax = (exp(1im * θmin) * eoR + hc, exp(1im * θmax) * eoR + hc)
     LFmin, LFmax = map(γ -> norm(svdvals(γ), q), (γRmin, γRmax))
     MR = sqrt(abs(tr(γRmax^2 - γRmin^2))^2 + 4 * abs(tr(γRmax * γRmin))^2) / abs(tr(γRmax^2 + γRmin^2))
     cR = abs(tr(γRmax^2 + γRmin^2)) / 2
     LD = norm(svdvals(ooR - eeR), q)
-    return (; LFmin, LFmax, LD, θmin, θmax, γRmin, γRmax, MR, cR)
+    return (; LFmin, LFmax, LD, θmin, θmax, γRmin, γRmax, MR, cR, γmin, γmax)
 end
 
 blockdiagonal(m, H::SymmetricFockHilbertSpace) = blockdiagonal(m, H.symmetry)
