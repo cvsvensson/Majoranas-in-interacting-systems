@@ -280,3 +280,22 @@ function optimized_Δ(H; μ, t, Δ, U, tol)
     prob = ZeroProblem(deg_fun, zero(Δ))
     solve(prob; rtol=tol)
 end
+
+
+function degeneracy_fun_μ(c, H; μ, t, Δ, U, kwargs...)
+    arnoldis = [ArnoldiWorkspace(ones(dim(H) ÷ 2), 20) for n in 1:2]
+    function deg(dμ)
+        h = matrix_representation(kitaev_hamiltonian(c, H; μ=μ .+ only(dμ), t, Δ=Δ, U), H)
+        hs = blocks(blockdiagonal(h, H))
+        vals = [partialschur!(h, arnoldi; nev=1, which=:SR, start_from=1, kwargs...) for (h, arnoldi) in zip(hs, arnoldis)]
+        real(vals[1][1].eigenvalues[1] - vals[2][1].eigenvalues[1])
+    end
+    return deg
+end
+
+function optimized_μ(H; μ, t, Δ, U, tol)
+    @fermions c
+    deg_fun = degeneracy_fun_μ(c, H; μ, t, Δ, U, tol)
+    prob = ZeroProblem(deg_fun, zero(μ))
+    solve(prob; rtol=tol)
+end
