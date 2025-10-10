@@ -18,4 +18,9 @@ export example_point_parameters, global_parameters
 include("src.jl")
 include("parameters.jl")
 
+## "Trick" LSP so that stuff works in scripts files
+@static if false
+    include("../scripts/kitaev_analytics.jl")
+end
+
 end
