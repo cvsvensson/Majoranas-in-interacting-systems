@@ -2,7 +2,7 @@ using DrWatson, LinearAlgebra
 using FermionicHilbertSpaces: complementary_subsystem
 @quickactivate :ManybodyMajoranas
 @fermions f
-N = 4
+N = 3
 S = 1:N
 HS = hilbert_space(S, ParityConservation())
 t = 1.0
@@ -19,11 +19,13 @@ y = o*e' + hc
 yt = 1im*o*e' + hc
 
 maj_labels = vec(permutedims(collect(Base.product(S, (:+, :-)))))
-Hy = majorana_hilbert_space(maj_labels, ParityConservation())
-Γ = majoranas(Hy)
+fmats = fermions(HS)
+Γmats = reduce(vcat, [[fmats[j] + hc, 1im * fmats[j] + hc] for j in S])
+Γ = Dict(zip(maj_labels, Γmats))
+@test Γ[1, :+] ≈ fmats[1]' + fmats[1]
+@test Γ[N, :-] ≈ 1im * (fmats[N] - fmats[N]')
 Q = 1 / 2^(N - 1) * prod(I - 1im * Γ[j, :-] * Γ[j + 1, :+] for j in 1:N-1)
-@test Q * o ≈ o
-@test Q * e ≈ e
+@test Q ≈ e * e' + o * o'
 @test y ≈ Γ[1, :+] * Q
 @test yt ≈ Γ[N, :-] * Q
 
