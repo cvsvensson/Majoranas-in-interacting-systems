@@ -12,7 +12,7 @@ HS = hilbert_space(1:N, qn)
 @unpack bounds, Us, δμs = wload(datadir("int_kitaev_phase_diagram_$N.jld2"))
 ## Pick a point in the phase diagram and plot the majorana wavefunctions
 HS = hilbert_space(1:N, qn)
-params = example_point_parameters(HS)
+params = good_majoranas_parameters(HS)
 symham = kitaev_hamiltonian(f, HS; params[[:U, :Δ, :μ, :t]]...)
 ham = matrix_representation(symham, HS)
 isreal(ham) && (ham = real(ham))
@@ -24,26 +24,39 @@ q = 2
 gauge = EigGauge()
 @time wavefunction_data = map(R -> reduced_majoranas_properties(gs_even, gs_odd, HS, hilbert_space([R]), gauge; q), 1:N)
 
+params2 = bad_majoranas_parameters(HS)
+symham2 = kitaev_hamiltonian(f, HS; params2[[:U, :Δ, :μ, :t]]...)
+ham2 = matrix_representation(symham2, HS)
+isreal(ham2) && (ham2 = real(ham2))
+
+vals2, vecs2 = ground_states_arnoldi(ham2, HS)
+gs_odd2 = vcat(vecs2[1], zero(vecs2[2]))
+gs_even2 = vcat(zero(vecs2[1]), vecs2[2])
+wavefunction_data2 = map(R -> reduced_majoranas_properties(gs_even2, gs_odd2, HS, hilbert_space([R]), gauge; q), 1:N)
 
 ##
 fig_aps = with_theme(theme_aps(markers=[:circle, :diamond, :utriangle], linestyles=[nothing, :dash])) do
+    x = Us
+    y = δμs
+    xparam = :U
+    yparam = :δμ
     # maxval = max(maximum(d -> d.LD, bounds))
     # minval = min(minimum(d -> d.LD, bounds))
     # colorrange = (minval, maxval)
     colorrange = (0, 1)
     colormap = cgrad(:viridis)
-    limits = (nothing, (0, 1.2))
+    limits = (nothing, (0, 1.4))
 
     fig = Figure(figure_padding=(13, 8, 1, 5), size=220 .* (1.2, 1))
     ga = fig[2, 1] = GridLayout()
-    ax1 = Axis(ga[1, 1]; xlabel=L"U/t", ylabel=L"\delta\mu/t", title=L"\sqrt{1-M_\text{half}}")
+    ax1 = Axis(ga[1, 1]; xlabel=L"U/t", ylabel=L"%$yparam/t", title=L"\sqrt{1-M_\text{half}}")
     ax2 = Axis(ga[1, 2]; xlabel=L"U/t", title=L"||(\gamma \tilde{\gamma})_\text{half}||_2")
     linkaxes!(ax1, ax2)
     hideydecorations!(ax2; minorticks=false, ticks=false)
     clips = (; highclip=last(colormap))
-    hm1 = heatmap!(ax1, Us, δμs, map(d -> sqrt(1 - d.MR), bounds); colorrange, colormap, colorscale=identity)
-    heatmap!(ax2, Us, δμs, map(d -> d.LD, bounds); colorrange, colormap, clips...)
-    scatter!(ax1, params.U, params.δμ; color=:red, marker=:x, strokewidth=1, markersize=10)
+    hm1 = heatmap!(ax1, x, y, map(d -> sqrt(1 - d.MR), bounds); colorrange, colormap, colorscale=identity)
+    # cf = contour!(ax1, x, y, map(d -> ismissing(d.MR) ? 0 : sqrt(1 - d.MR), bounds))
+    heatmap!(ax2, x, y, map(d -> d.LD, bounds); colorrange, colormap, clips...)
     Colorbar(ga[1, 3], hm1; ticks=LogTicks(WilkinsonTicks(4, k_min=1, k_max=4)), minorticksvisible=false)
 
     rowsize!(fig.layout, 1, Relative(0.45))
@@ -52,13 +65,48 @@ fig_aps = with_theme(theme_aps(markers=[:circle, :diamond, :utriangle], linestyl
     ax = Axis(gb[1, 1]; yscale, xlabel=L"j", limits, xticks=1:N)
     text!(fig.scene, 0.002, 0.92; text=LaTeXString("(a)"), space=:relative)
     text!(fig.scene, 0.002, 0.5; text=LaTeXString("(b)"), space=:relative)
-    scatterlines!(ax, 1:N, map(d -> d.LFmin, wavefunction_data), label=L"||\gamma_{j}||_2", marker=:circle, linestyle=:dash)
-    scatterlines!(ax, 1:N, map(d -> d.LFmax, wavefunction_data), label=L"||\tilde{\gamma}_{j}||_2", marker=:diamond, linestyle=:dot)
-    scatterlines!(ax, 1:N, map(d -> d.MR, wavefunction_data), label=L"M_j", marker=:utriangle, linestyle=:solid)
-    axislegend(ax, position=(0.5, 1.5), labelsize=9)
+
+    colors = [Cycled(2), Cycled(1)]
+    heatmap_markersize = 12
+    scatter_markersize = 8
+    scatter!(ax1, params[xparam], params[yparam]; color=colors[1], marker=:x, strokewidth=1, markersize=heatmap_markersize)
+
+    # scatterlines!(ax, 1:N, map(d -> d.LFmin, wavefunction_data), label=L"||\gamma_{j}||_2", marker=:circle, linestyle=:dash)
+    # scatterlines!(ax, 1:N, map(d -> d.LFmax, wavefunction_data), label=L"||\tilde{\gamma}_{j}||_2", marker=:diamond, linestyle=:dot)
+    # scatterlines!(ax, 1:N, map(d -> d.MR, wavefunction_data), label=L"M_j", marker=:utriangle, linestyle=:solid)
+
+    # scatterlines!(ax, 1:N, map(d -> d.MR, wavefunction_data), label=L"M_j", marker=:utriangle, linestyle=:solid, color=colors[1])
+
+    lines_strokewidth = 0.2
+    scatter!(ax1, params2[xparam], params2[yparam]; color=colors[2], marker=:+, strokewidth=1, markersize=heatmap_markersize)
+    scatterlines!(ax, 1:N, map(d -> d.LFmin, wavefunction_data2), label=L"||\gamma_{j}||_2", marker=:+, linestyle=:solid, color=colors[2], markersize=scatter_markersize, strokewidth=lines_strokewidth)
+    scatterlines!(ax, 1:N, map(d -> d.LFmax, wavefunction_data2), label=L"||\tilde{\gamma}_{j}||_2", marker=:+, linestyle=:dash, color=colors[2], markersize=scatter_markersize, strokewidth=lines_strokewidth)
+
+    scatterlines!(ax, 1:N, map(d -> d.LFmin, wavefunction_data), label=L"||\gamma_{j}||_2", marker=:x, linestyle=:solid, color=colors[1], markersize=scatter_markersize, strokewidth=lines_strokewidth)
+    scatterlines!(ax, 1:N, map(d -> d.LFmax, wavefunction_data), label=L"||\tilde{\gamma}_{j}||_2", marker=:x, linestyle=:dash, color=colors[1], markersize=scatter_markersize, strokewidth=lines_strokewidth)
+    # scatterlines!(ax, 1:N, map(d -> d.MR, sweet_spot_wavefunction_data), label=L"M_j", marker=:utriangle, linestyle=:solid, color=colors[2])
+
+    # axE = Axis(gb[1, 2])
+    # hmE = heatmap!(axE, x, y, map(d -> ismissing(d.vals) ? missing : (only(diff(d.vals))) / global_parameters.t, bounds), colormap=:redsblues, colorrange=(-0.1, 0.1))
+    # Colorbar(gb[1, 3], hmE, label=L"δE/t")
+
+    # lines!(ax1, δμs ./ 2, δμs, color=:red, linestyle=:dash)
+
+    # axislegend(ax, position=(0.5, 1.5), labelsize=9)
+    # Legend(gb[1, 2], ax; orientation=:vertical, framevisible=false, labelsize=9, spacing=10, padding=5)
+
+    gamma = [LineElement(color=:black, linestyle=:solid)]#, MarkerElement(color=:black, marker=:diamond, linestyle=:dash)]
+    gammatilde = [LineElement(color=:black, linestyle=:dash)]#, MarkerElement(color=:black, marker=:circle, linestyle=:dash)]
+
+    Legend(gb[1, 2],
+        [gamma, gammatilde],
+        [L"||\gamma_{j}||_2", L"||\tilde{\gamma}_{j}||_2"], rowgap=5, labelsize=14)
+
     rowgap!(fig.layout, 1, Relative(0.02))
+    # colsize!(gb, 1, Relative(0.8))
+    colsize!(gb, 2, Relative(0.22))
     fig
 end
 ##
 save(plotsdir("int_kitaev_phase_diagram_and_wavefunctions_$(N).pdf"), fig_aps, px_per_unit=40)
-#save(plotsdir("int_kitaev_phase_diagram_and_wavefunctions_$(N)_aps_mp.png"), fig_aps, px_per_unit=10)
+save(plotsdir("int_kitaev_phase_diagram_and_wavefunctions_$(N).png"), fig_aps, px_per_unit=10)

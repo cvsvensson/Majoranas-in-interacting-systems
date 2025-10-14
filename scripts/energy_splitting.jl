@@ -58,8 +58,8 @@ qn = ParityConservation()
 spaces = hilbert_spaces(S, R, B, qn)
 @unpack HS, HB, HR, HSB, HRB = spaces
 ##
-@time params = example_point_parameters(HS; tol=1e-6)
-symham = kitaev_hamiltonian(f, HS; params[[:μ, :t, :U]]..., Δ=params[:Δdeg])
+@time params = energy_splitting_parameters(HS; tol=1e-16)
+symham = kitaev_hamiltonian(f, HS; params[[:μ, :t, :U, :Δ]]...)
 hS = matrix_representation(symham, HS)
 vals, vecs = blockeigen(hS, HS)
 nSB = div(size(vecs, 2), 2)
@@ -79,7 +79,7 @@ hRBsym = tc * f[r]' * f[b] + Δc * f[r] * f[b] + hc +
          Uc * f[b]' * f[b] * f[r]' * f[r]
 hRB = matrix_representation(hRBsym, spaces.HRB)
 ϵs = 2 * λ * range(-1, 1, 200)
-reduced = reduced_majoranas_properties(gs_even, gs_odd, HS, HR, FrobeniusGauge(); q=2)
+reduced = reduced_majoranas_properties(gs_even, gs_odd, HS, HR, FrobeniusGauge(); q=2);
 @time energy_splitting_data = Folds.map(ϵs) do ϵ
     hB = matrix_representation(ϵ * f[only(B)]' * f[only(B)], spaces.HB)
     hamiltonians = (; hS0=hS, hS=hS, hB=hB, hRB=hRB)
@@ -93,11 +93,17 @@ pbounds = [d.p_bound for d in energy_splitting_data]
 energy_splitting_fig = with_theme(theme_aps()) do
     fig = Figure(size=150 .* (1.5, 1), figure_padding=5)
     ax = Axis(fig[1, 1]; xlabel=L"\varepsilon_d/ λ", limits=(nothing, (0, 1.1 * pbounds[1] / normalization)))
-    lines!(ax, ϵs ./ λ, pbounds ./ normalization, label=LaTeXString("Eq. (26)"); linestyle=:dot, color=:black)
-    lines!(ax, ϵs ./ λ, npbounds ./ normalization, label=LaTeXString("Eq. (25)"); linestyle=:dash, color=:black)
-    lines!(ax, ϵs ./ λ, δEs ./ normalization , label=L"|\delta E| / λ"; linestyle=nothing, color=:black)
+    lines!(ax, ϵs ./ λ, pbounds ./ normalization, label=LaTeXString("Eq. (35)"); linestyle=:dot, color=:black)
+    lines!(ax, ϵs ./ λ, npbounds ./ normalization, label=LaTeXString("Eq. (34)"); linestyle=:dash, color=:black)
+    lines!(ax, ϵs ./ λ, δEs ./ normalization, label=L"|\delta E| / λ"; linestyle=nothing, color=:black)
+    text!(fig.scene, 0.03, 0.805; text=LaTeXString("\\frac{E}{λ}"), space=:relative)
+    # text!(ax, 0.2, 0.7; text=L"Q_o = %$(round(reduced.LFmin; digits =3))", space=:relative)
+    # text!(ax, 0.2, 0.55; text=L"Q_e = %$(round(reduced.LD; digits =3))", space=:relative)
+
     axislegend(ax; position=(0.9, 0.75))
+
     fig
 end
 ##
 save(plotsdir("energy_splitting_comparison_$N.pdf"), energy_splitting_fig, px_per_unit=40)
+save(plotsdir("energy_splitting_comparison_mu_frustration_free_$N.png"), energy_splitting_fig, px_per_unit=10)

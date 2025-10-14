@@ -29,7 +29,7 @@ Us = range(-3, 5, 200)
     gauge = FrobeniusGauge()
     ham = matrix_representation(symham, HS)
     isreal(ham) && (ham = real(ham))
-    calculate_ground_state_properties(ham, HS, HR, 2, gauge)[[:LFmin, :LFmax, :LD, :θmin, :θmax, :vals, :MR, :cR]]
+    (; calculate_ground_state_properties(ham, HS, HR, 2, gauge)[[:LFmin, :LFmax, :LD, :θmin, :θmax, :vals, :MR, :cR]]..., params)
 end;
 ## Save data
 wsave(datadir("int_kitaev_phase_diagram_$N.jld2"), Dict("bounds" => bounds, "Us" => Us, "δμs" => δμs))

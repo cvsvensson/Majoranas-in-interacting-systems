@@ -203,7 +203,13 @@ blockeigen(m::Hermitian{<:Any,<:SparseArrays.SparseMatrixCSC}, H::AbstractHilber
 function ground_states_arnoldi(m::SparseArrays.SparseMatrixCSC, H::AbstractHilbertSpace; kwargs...)
     ms = blocks(blockdiagonal(m, H))
     eigens = map(ms) do m
-        decomp, history = partialschur(Hermitian(m), nev=1, which=:SR; kwargs...)
+        decomp, history = try
+            partialschur(Hermitian(m), nev=1, which=:SR; kwargs...)
+        catch e
+            @warn e "Trying to increase mindim and restarts"
+            println(m)
+            partialschur(Hermitian(m), nev=1, which=:SR; kwargs..., mindim=40, maxdim=size(m, 1), restarts=1000)
+        end
         # @show history
         partialeigen(decomp)
     end
@@ -220,22 +226,20 @@ function decompose_coupling(hRB::AbstractMatrix, HRB, HR, HB)
 end
 
 
-hopping(t, f1, f2) = t * f1'f2 + hc
-pairing(Δ, f1, f2) = Δ * f1' * f2' + hc
-numberop(f) = f'f
-coulomb(f1, f2) = f1' * f1 * f2' * f2
-_kitaev_2site(f1, f2; t, Δ, U) = hopping(t, f1, f2) + U * coulomb(f1, f2) + pairing(Δ, f1, f2)
-_kitaev_1site(f; μ) = μ * numberop(f)
-
 getvalue(v::Union{<:AbstractVector,<:Tuple,<:StepRange}, i, N; size=1) = v[i]
 getvalue(x::Number, i, N; size=1) = 1 <= i <= N + 1 - size ? x : zero(x)
 
 function kitaev_hamiltonian(c, H::AbstractHilbertSpace; μ, t, Δ, U)
     labels = keys(H)
     N = length(labels)
-    h1s = (_kitaev_1site(c[lab]; μ=getvalue(μ, ind, N)) for (ind, lab) in enumerate(labels))
-    h2s = (_kitaev_2site(c[lab], c[labels[mod1(ind + 1, N)]]; t=getvalue(t, ind, N; size=2), Δ=getvalue(Δ, ind, N; size=2), U=getvalue(U, lab, N; size=2)) for (ind, lab) in enumerate(labels))
-    sum(h1s) + sum(h2s)
+    μs = [getvalue(μ, ind, N) for ind in 1:N]
+    ts = [getvalue(t, ind, N; size=2) for ind in 1:N-1]
+    Δs = [getvalue(Δ, ind, N; size=2) for ind in 1:N-1]
+    Us = [getvalue(U, ind, N; size=2) for ind in 1:N-1]
+    sum(μs[n] * c[n]' * c[n] for n in labels) +
+    sum(ts[n] * c[n]' * c[n+1] + hc for n in 1:N-1) +
+    sum(Δs[n] * c[n]' * c[n+1]' + hc for n in 1:N-1) +
+    sum(Us[n] * c[n]' * c[n] * c[n+1]' * c[n+1] for n in 1:N-1)
 end
 
 
@@ -256,12 +260,6 @@ function frustration_free_μ(; t, Δ, U, N)
     return μ
 end
 
-function kitaev_at_sweetspot(c, H; U, t)
-    N = length(H)
-    μ = sweet_spot_μ(; U, N)
-    Δ = t + U / 2
-    return kitaev_hamiltonian(c, H; μ, t, Δ, U)
-end
 
 function degeneracy_fun_Δ(c, H; μ, t, Δ, U, kwargs...)
     arnoldis = [ArnoldiWorkspace(ones(dim(H) ÷ 2), 20) for n in 1:2]
