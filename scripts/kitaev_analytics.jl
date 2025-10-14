@@ -1,6 +1,8 @@
-using DrWatson, LinearAlgebra
-using FermionicHilbertSpaces: complementary_subsystem
+using DrWatson
 @quickactivate :ManybodyMajoranas
+using LinearAlgebra
+using FermionicHilbertSpaces: complementary_subsystem
+using Test
 @fermions f
 N = 3
 S = 1:N
