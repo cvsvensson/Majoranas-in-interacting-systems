@@ -226,20 +226,14 @@ function decompose_coupling(hRB::AbstractMatrix, HRB, HR, HB)
 end
 
 
-getvalue(v::Union{<:AbstractVector,<:Tuple,<:StepRange}, i, N; size=1) = v[i]
-getvalue(x::Number, i, N; size=1) = 1 <= i <= N + 1 - size ? x : zero(x)
-
 function kitaev_hamiltonian(c, H::AbstractHilbertSpace; μ, t, Δ, U)
     labels = keys(H)
     N = length(labels)
-    μs = [getvalue(μ, ind, N) for ind in 1:N]
-    ts = [getvalue(t, ind, N; size=2) for ind in 1:N-1]
-    Δs = [getvalue(Δ, ind, N; size=2) for ind in 1:N-1]
-    Us = [getvalue(U, ind, N; size=2) for ind in 1:N-1]
-    sum(μs[n] * c[n]' * c[n] for n in labels) +
-    sum(ts[n] * c[n]' * c[n+1] + hc for n in 1:N-1) +
-    sum(Δs[n] * c[n]' * c[n+1]' + hc for n in 1:N-1) +
-    sum(Us[n] * c[n]' * c[n] * c[n+1]' * c[n+1] for n in 1:N-1)
+    pair_iter = zip(labels, Iterators.drop(labels, 1))
+    sum(μ .* [c[l]' * c[l] for l in labels]) +
+    sum(t .* [c[l1]' * c[l2] + hc for (l1, l2) in pair_iter]) +
+    sum(Δ .* [c[l1]' * c[l2]' + hc for (l1, l2) in pair_iter]) +
+    sum(U .* [c[l1]' * c[l1] * c[l2]' * c[l2] for (l1, l2) in pair_iter])
 end
 
 

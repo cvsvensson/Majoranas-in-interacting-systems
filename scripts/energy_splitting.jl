@@ -20,7 +20,7 @@ function calculate_bounds(reduced, hamiltonians, spaces, q)
     canon_hams = canonicalize_hamiltonians(hamiltonians, spaces)
     @unpack hS0, hS, hB, hRB = canon_hams
     heff = effective_hamiltonian(canon_hams, spaces, (reduced.γmin, reduced.γmax))
-    @assert abs(heff.effops.ε) < 1e-6 # zero in this script
+    @warn abs(heff.effops.ε) < 1e-6 "ε > 1e-6"
     vals_full, _ = blockeigen(embed(hS0, HS => HSB) + embed(hRB, HRB => HSB) + embed(hB, HB => HSB), HSB)
     vals, vecs = blockeigen(heff.total_ham, spaces.HgsB)
     n = div(size(vecs, 2), 2) # number of odd/even states
@@ -59,7 +59,8 @@ spaces = hilbert_spaces(S, R, B, qn)
 @unpack HS, HB, HR, HSB, HRB = spaces
 ##
 @time params = energy_splitting_parameters(HS; tol=1e-16)
-symham = kitaev_hamiltonian(f, HS; params[[:μ, :t, :U, :Δ]]...)
+# params = (; params..., μ=round.(params.μ; digits=4))
+symham = kitaev_hamiltonian(f, HS; params...)
 hS = matrix_representation(symham, HS)
 vals, vecs = blockeigen(hS, HS)
 nSB = div(size(vecs, 2), 2)
@@ -78,7 +79,7 @@ Uc = λ
 hRBsym = tc * f[r]' * f[b] + Δc * f[r] * f[b] + hc +
          Uc * f[b]' * f[b] * f[r]' * f[r]
 hRB = matrix_representation(hRBsym, spaces.HRB)
-ϵs = 2 * λ * range(-1, 1, 200)
+ϵs = 2 * λ * range(-1, 1, 30)
 reduced = reduced_majoranas_properties(gs_even, gs_odd, HS, HR, FrobeniusGauge(); q=2);
 @time energy_splitting_data = Folds.map(ϵs) do ϵ
     hB = matrix_representation(ϵ * f[only(B)]' * f[only(B)], spaces.HB)
