@@ -91,8 +91,8 @@ energy_splitting_fig = with_theme(theme_aps()) do
     fig = Figure(size=150 .* (1.5, 1), figure_padding=5)
     ax = Axis(fig[1, 1]; xlabel=L"\varepsilon_d/ λ", limits=(nothing, (0, 1.1 * pbounds[1] / normalization)))
     colors = [Cycled(2), Cycled(4), Cycled(1)]
-    lines!(ax, ϵs ./ λ, pbounds ./ normalization, label=LaTeXString("Eq. (35)"); linestyle=(:dot, :dense), color=colors[1])
-    lines!(ax, ϵs ./ λ, npbounds ./ normalization, label=LaTeXString("Eq. (34)"); linestyle=:dash, color=colors[2])
+    lines!(ax, ϵs ./ λ, pbounds ./ normalization, label=LaTeXString("Eq. (36)"); linestyle=(:dot, :dense), color=colors[1])
+    lines!(ax, ϵs ./ λ, npbounds ./ normalization, label=LaTeXString("Eq. (35)"); linestyle=:dash, color=colors[2])
     lines!(ax, ϵs ./ λ, δEs ./ normalization, label=L"|\delta E| / λ"; linestyle=nothing, color=colors[3])
     text!(fig.scene, 0.03, 0.84; text=LaTeXString("\\frac{E}{λ}"), space=:relative, fontsize=10)
     # text!(ax, 0.2, 0.7; text=L"Q_o = %$(round(reduced.LFmin; digits =3))", space=:relative)
