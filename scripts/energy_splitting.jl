@@ -1,6 +1,6 @@
 using DrWatson
 @quickactivate :ManybodyMajoranas
-using Folds # parallell calculations
+using Folds
 using UnPack, CairoMakie, MakiePublication, LaTeXStrings
 function calculate_bounds(hamiltonians, spaces, q)
     @unpack HS = spaces
@@ -20,7 +20,9 @@ function calculate_bounds(reduced, hamiltonians, spaces, q)
     canon_hams = canonicalize_hamiltonians(hamiltonians, spaces)
     @unpack hS0, hS, hB, hRB = canon_hams
     heff = effective_hamiltonian(canon_hams, spaces, (reduced.γmin, reduced.γmax))
-    @warn abs(heff.effops.ε) < 1e-6 "ε > 1e-6"
+    if abs(heff.effops.ε) > 1e-6
+        @warn "ε > 1e-6" (heff.effops.ε)
+    end
     vals_full, _ = blockeigen(embed(hS0, HS => HSB) + embed(hRB, HRB => HSB) + embed(hB, HB => HSB), HSB)
     vals, vecs = blockeigen(heff.total_ham, spaces.HgsB)
     n = div(size(vecs, 2), 2) # number of odd/even states
@@ -37,15 +39,9 @@ function calculate_bounds(reduced, hamiltonians, spaces, q)
     δEs_full = abs(vals_full[1] - vals_full[div(length(vals_full), 2)+1])
     np_bound = (reduced.LD * even_norm .+ reduced.LFmin * odd_norm * OEBnorms) ./ overlaps1
     p_bound = sqrt(dim(spaces.HB)) * (reduced.LD * even_norm + reduced.LFmin * odd_norm)
-    # analytics = analytical_bounds(reduced, OEBnorms, overlaps1, pairs)
     (; heff, δEs, δEs_full, p_bound, np_bound, even_norm, odd_norm, vals, vecs, pairs, overlaps1, OEBnorms)
 end
 
-function analytical_bounds(reduced, OEBnorms, overlaps1, pairs)
-    simple = reduced.LD + 2 * reduced.LFmin
-    complicated = (reduced.LD + 2 * reduced.LFmin * OEBnorms[pairs[1]]) / (sqrt(2) * overlaps1[pairs[1]])
-    return (; simple, complicated)
-end
 ##
 @fermions f
 N = 8
@@ -58,7 +54,7 @@ qn = ParityConservation()
 spaces = hilbert_spaces(S, R, B, qn)
 @unpack HS, HB, HR, HSB, HRB = spaces
 ##
-@time params = energy_splitting_parameters(HS; tol=1e-16)
+@time params = energy_splitting_parameters(HS)
 # params = (; params..., μ=round.(params.μ; digits=4))
 symham = kitaev_hamiltonian(f, HS; params...)
 hS = matrix_representation(symham, HS)
@@ -98,14 +94,16 @@ energy_splitting_fig = with_theme(theme_aps()) do
     lines!(ax, ϵs ./ λ, pbounds ./ normalization, label=LaTeXString("Eq. (35)"); linestyle=(:dot, :dense), color=colors[1])
     lines!(ax, ϵs ./ λ, npbounds ./ normalization, label=LaTeXString("Eq. (34)"); linestyle=:dash, color=colors[2])
     lines!(ax, ϵs ./ λ, δEs ./ normalization, label=L"|\delta E| / λ"; linestyle=nothing, color=colors[3])
-    text!(fig.scene, 0.03, 0.84; text=LaTeXString("\\frac{E}{λ}"), space=:relative, fontsize = 10)
+    text!(fig.scene, 0.03, 0.84; text=LaTeXString("\\frac{E}{λ}"), space=:relative, fontsize=10)
     # text!(ax, 0.2, 0.7; text=L"Q_o = %$(round(reduced.LFmin; digits =3))", space=:relative)
     # text!(ax, 0.2, 0.55; text=L"Q_e = %$(round(reduced.LD; digits =3))", space=:relative)
-
     axislegend(ax; position=(0.9, 0.75))
-
     fig
 end
 ##
-save(plotsdir("energy_splitting_comparison_$N.pdf"), energy_splitting_fig, px_per_unit=40)
-save(plotsdir("energy_splitting_comparison_mu_frustration_free_$N.png"), energy_splitting_fig, px_per_unit=10)
+save(plotsdir("energy_splitting_comparison_$N.pdf"), energy_splitting_fig)
+save(plotsdir("energy_splitting_comparison_$N.png"), energy_splitting_fig, px_per_unit=10)
+
+##
+reduced.LFmin
+reduced.LD
