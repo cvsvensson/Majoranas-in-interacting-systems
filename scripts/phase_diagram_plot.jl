@@ -8,9 +8,9 @@ qn = ParityConservation()
 HS = hilbert_space(1:N, qn)
 @fermions f
 
-## Makie plot
+## Load data
 @unpack bounds, Us, δμs = wload(datadir("int_kitaev_phase_diagram_$N.jld2"))
-## Pick a point in the phase diagram and plot the majorana wavefunctions
+## Pick a point in the phase diagram and calculate the Majorana weights
 HS = hilbert_space(1:N, qn)
 params = good_majoranas_parameters(HS)
 symham = kitaev_hamiltonian(f, HS; params[[:U, :Δ, :μ, :t]]...)
