@@ -86,4 +86,4 @@ fig_aps = with_theme(theme_aps(markers=[:circle, :diamond, :utriangle], linestyl
 end
 ##
 save(plotsdir("int_kitaev_phase_diagram_and_wavefunctions_$(N).pdf"), fig_aps)
-save(plotsdir("int_kitaev_phase_diagram_and_wavefunctions_$(N).png"), fig_aps, px_per_unit=10)
+save(plotsdir("int_kitaev_phase_diagram_and_wavefunctions_$(N).png"), fig_aps, px_per_unit=1)

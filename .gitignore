@@ -28,8 +28,8 @@ LocalPreferences.toml
 JuliaLocalPreferences.toml
 
 # Data, Plots
-data/
-plots/
+#data/
+#plots/
 
 # Vscode
 .vscode/

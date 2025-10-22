@@ -102,7 +102,7 @@ energy_splitting_fig = with_theme(theme_aps()) do
 end
 ##
 save(plotsdir("energy_splitting_comparison_$N.pdf"), energy_splitting_fig)
-save(plotsdir("energy_splitting_comparison_$N.png"), energy_splitting_fig, px_per_unit=10)
+save(plotsdir("energy_splitting_comparison_$N.png"), energy_splitting_fig, px_per_unit=1.2)
 
 ##
 reduced.LFmin
