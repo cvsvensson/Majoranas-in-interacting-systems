@@ -1,5 +1,5 @@
-# Majoranas in interacting systems
-This repository contains the code used to generate data and figures for the paper
+# Quantifying robustness and locality of Majorana bound states in interacting systems
+This repository contains the code used to generate the data and the figures used in the paper
 > **Quantifying robustness and locality of Majorana bound states in interacting systems** \
 > *William Samuelson, Juan Daniel Torres Luna, Sebastian Miles, A. Mert Bozkurt, Martin Leijnse, Michael Wimmer, Viktor Svensson*
 
