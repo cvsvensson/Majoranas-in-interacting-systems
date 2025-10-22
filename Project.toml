@@ -1,5 +1,6 @@
 name = "ManybodyMajoranas"
 uuid = "78756301-70be-4e15-9f6b-8f9769941545"
+version = "1.0.0"
 
 [deps]
 ArnoldiMethod = "ec485272-7323-5ecc-a04f-4719b315124d"
