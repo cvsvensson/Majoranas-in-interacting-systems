@@ -23,7 +23,7 @@ UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 [compat]
 ArnoldiMethod = "0.4"
 BlockDiagonals = "0.2"
-FermionicHilbertSpaces = "0.8"
+FermionicHilbertSpaces = "0.9"
 Reexport = "1"
 Roots = "2"
 SparseArrays = "1"
