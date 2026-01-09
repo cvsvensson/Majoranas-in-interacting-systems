@@ -159,10 +159,7 @@ end
 function optimal_gauge(oeR, ::FrobeniusGauge, q)
     γ = Hermitian(oeR + hc)
     γtilde = Hermitian(1im * oeR + hc)
-    if (norm(γ)^2 - norm(γtilde)^2) < 1e-12
-        return 0.0
-    end
-    θ = 1 / 2 * atan(2 * real(tr(γ * γtilde)) / (norm(γ)^2 - norm(γtilde)^2))
+    θ = 1 / 2 * atan(2 * real(tr(γ * γtilde)), norm(γ)^2 - norm(γtilde)^2)
 
     if norm(exp(1im * θ) * oeR + hc) > norm(exp(1im * (θ + pi / 2)) * oeR + hc)
         θ = minimum(abs, (θ + pi / 2, θ - pi / 2))
