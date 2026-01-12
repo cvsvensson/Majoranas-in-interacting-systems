@@ -40,7 +40,7 @@ H = hilbert_space(labels, ParityConservation())
 ##
 Δ0 = 1
 params = (; EZ=(; L=1.5Δ0, R=1.5Δ0),
-    U=(; L=0Δ0, R=0Δ0),
+    U=(; L=5Δ0, R=5Δ0),
     t=0.25 * Δ0, tso=0.3,
     Δ0)
 ##
@@ -68,7 +68,18 @@ function find_sweet_spot(ham0, perts; HS, q, Epenalty=1e6, optkwargs...)
 end
 ##
 
-ts = range(0.1, 0.8, 20)
+outer_sites = [[(n, :↑), (n, :↓)] for n in (:L, :R)]
+outer_spins = [[(n, σ)] for n in (:L, :R) for σ in (:↑, :↓)]
+subregions = vcat(outer_sites, outer_spins)
+function quality_measures(reduced_dict)
+    Qespin = sqrt(sum(reduced_dict[label].LD^2 for label in outer_spins))
+    Qesite = sqrt(sum(reduced_dict[label].LD^2 for label in outer_sites))
+    Qospin = sqrt(sum(reduced_dict[label].LFmin^2 for label in [[(:L, :↑)], [(:L, :↓)]]))
+    Qosite = reduced_dict[[(:L, :↑), (:L, :↓)]].LFmin
+    (; Qespin, Qesite, Qospin, Qosite)
+end
+
+ts = range(0.05, 1.25, 20)
 sweet_spots = Folds.map(ts) do x
     _params = (; params..., μ=(; L=params.EZ.L, H=0Δ0, R=params.EZ.R), t=x * Δ0)
     symham = symbolic_hamiltonian(; _params...)
@@ -78,52 +89,78 @@ sweet_spots = Folds.map(ts) do x
     sol = find_sweet_spot(ham0, perts; HS=H, q=2, Epenalty=1e4, lb=Δ0 .* [-1.3, -1], ub=Δ0 .* [0, 0.0])
     ham = ham0 + sum(sol .* perts)
     vals, vecs = eigen!(Hermitian(Matrix(ham)))
-    modes = keys(H)
-    reduced = Dict(m => reduced_majoranas_properties(vecs[:, 1], vecs[:, 2], H, subregion([m], H); q=2) for m in keys(H))
+    reduced = Dict(m => reduced_majoranas_properties(vecs[:, 1], vecs[:, 2], H, subregion(m, H); q=1) for m in subregions)
     δQs = [charge_diff(vecs[:, 1], vecs[:, 2], num_ops[i]) for i in (1, 3)]
     Egap = vals[3] - vals[2]
     δE = vals[2] - vals[1]
     (dμ=sol, params=_params, vals, vecs, reduced, δQs, Egap, δE)
 end
 
-ints = mapreduce(x -> [sqrt(2) * x.reduced[m].LD / (x.reduced[m].LFmin * x.reduced[m].LFmax) for m in keys(H)[[1, 3, 4, 6]]], hcat, sweet_spots)
-LDs = map(x -> [x.reduced[m].LD for m in keys(H)[[1, 3, 4, 6]]], sweet_spots)
-LFs = map(x -> [x.reduced[m].LFmin for m in keys(H)[[1, 3, 4, 6]]], sweet_spots)
-map(x -> [x.reduced[m].LFmax for m in keys(H)[[1, 3, 4, 6]]], sweet_spots)
-δQs = map(x -> abs(x.δQs[1]), sweet_spots)
+qms = map(x -> quality_measures(x.reduced), sweet_spots)
 Egaps = map(x -> x.Egap, sweet_spots)
+f = Figure();
+ax = Axis(f[1, 1]; xlabel=L"t/\Delta_0")
+p1 = lines!(ax, ts, [q.Qespin for q in qms], label=L"Q_e^\mathrm{spin}");
+p2 = lines!(ax, ts, [q.Qesite for q in qms], label=L"Q_e^\mathrm{site}");
+p3 = lines!(ax, ts, [q.Qospin for q in qms], label=L"Q_o^\mathrm{spin}", linestyle=:dash);
+p4 = lines!(ax, ts, [q.Qosite for q in qms], label=L"Q_o^\mathrm{site}", linestyle=:dash);
+p5 = lines!(ax, ts, [abs(x.δQs[1]) for x in sweet_spots], label=L"|\delta n_\mathrm{L}| = |\delta n_\mathrm{R}|", linestyle=:dot);
+axislegend(ax; position=:lt)
+axgap = Axis(f[1, 2]; xlabel=L"t/\Delta_0")
+g1 = lines!(axgap, ts, Egaps, label=L"E_g/\Delta_0");
+g2 = lines!(axgap, ts, map(x -> x.δE, sweet_spots), label=L"\delta E", linestyle=:dash);
+axislegend(axgap; position=:lt)
+ax_log = Axis(
+    f[2, 1];
+    xlabel=L"t/\Delta_0",
+    yscale=log10
+)
+lines!(ax_log, ts, [q.Qespin for q in qms])
+lines!(ax_log, ts, [q.Qesite for q in qms])
+lines!(ax_log, ts, [q.Qospin for q in qms], linestyle=:dash)
+lines!(ax_log, ts, [q.Qosite for q in qms], linestyle=:dash)
+#=lines!(ax_log, ts, [abs(x.δQs[1]) for x in sweet_spots], linestyle=:dot)=#
+axgap_log = Axis(
+    f[2, 2];
+    xlabel=L"t/\Delta_0",
+    yscale=log10
+)
+lines!(axgap_log, ts, Egaps)
+#=lines!(axgap_log, ts, map(x -> abs(x.δE), sweet_spots), linestyle=:dash)=#
+f
+
+save("ABS_to_YSR_sweet_spots_Qs.png", f)
+
+ints = mapreduce(x -> [sqrt(2) * x.reduced[m].LD / (x.reduced[m].LFmin * x.reduced[m].LFmax) for m in outer_spins], hcat, sweet_spots)
+LDs = map(x -> [x.reduced[m].LD for m in outer_spins], sweet_spots)
+LFs = map(x -> [x.reduced[m].LFmin for m in outer_spins], sweet_spots)
+map(x -> [x.reduced[m].LFmax for m in outer_spins], sweet_spots)
+δQs = map(x -> abs(x.δQs[1]), sweet_spots)
+@assert all(abs.(δQs) .< 1e-9)
 δEs = map(x -> x.δE, sweet_spots)
+@assert all(abs.(δEs) .< 1e-9)
 μshifts = mapreduce(x -> x.dμ.u, hcat, sweet_spots)
 
 f = Figure();
-ax = Axis(f[1, 1]; xlabel=L"t/\Delta_0", yscale=log10);
-lines!(ax, ts, [d'd for d in LDs], label="LDspin");
-lines!(ax, ts, [f'f for f in LFs], label="LFspin");
-axislegend(ax; position=:rb)
-axgap = Axis(f[2, 1]; xlabel=L"t/\Delta_0")
-lines!(axgap, ts, Egaps, label=L"E_g/\Delta_0");
-axislegend(axgap; position=:rb)
-axδQ = Axis(f[1, 2]; xlabel=L"t/\Delta_0", yscale=log10)
-lines!(axδQ, ts, δQs, label="δQsite");
+axδQ = Axis(f[1, 1]; xlabel=L"t/\Delta_0", yscale=log10)
+lines!(axδQ, ts, replace(δQs, 0 => NaN), label=L"δn_L = δn_R");
 axislegend(axδQ; position=:rb)
-axδE = Axis(f[2, 2]; xlabel=L"t/\Delta_0", yscale=log10)
+axδE = Axis(f[1, 2]; xlabel=L"t/\Delta_0", yscale=log10)
 lines!(axδE, ts, replace(δEs, 0 => NaN), label="δE");
 axislegend(axδE; position=:rb)
-axμ = Axis(f[3, 1]; xlabel=L"t/\Delta_0")
+axμ = Axis(f[2, 1]; xlabel=L"t/\Delta_0")
 series!(axμ, ts, μshifts, labels=[L"dμ_D" L"dμ_H"]);
 axislegend(axμ; position=:lb)
-axints = Axis(f[3, 2]; xlabel=L"t/\Delta_0")
-lines!(axints, ts, ints[1, :]);
+axints = Axis(f[2, 2]; xlabel=L"t/\Delta_0")
+series!(axints, ts, ints);
 f
-
-save("ABS_to_YSR_sweet_spots.png", f)
 
 
 ### charge-stability diagram around delft sweet spot
 dϵs = range(-3, 3, 100)
 num_ops = [matrix_representation(c[n, :↑]'c[n, :↑] + c[n, :↓]'c[n, :↓], H) for n in (:L, :H, :R)]
 perts = [num_ops[1], num_ops[3]]
-ss = sweet_spots[13]
+ss = sweet_spots[end]
 symham = symbolic_hamiltonian(; ss.params..., 
                               μ=(; L=ss.params.μ.L + ss.dμ[1], H=ss.params.μ.H + ss.dμ[2], R=ss.params.μ.R + ss.dμ[1]))
 ham0 = matrix_representation(symham, H)
