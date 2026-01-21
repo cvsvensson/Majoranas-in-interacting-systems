@@ -4,6 +4,7 @@ using RandomMatrices
 using UnPack
 using Reexport
 using Roots
+using LowRankMatrices
 
 @reexport using FermionicHilbertSpaces
 import FermionicHilbertSpaces: AbstractHilbertSpace, AbstractFockHilbertSpace, FockHilbertSpace, SymmetricFockHilbertSpace, FockSymmetry, dim, project_on_parities

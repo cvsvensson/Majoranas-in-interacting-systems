@@ -111,28 +111,6 @@ function random_hamiltonian(H::SymmetricFockHilbertSpace, β=2)
 end
 
 
-struct LowRankMatrix{N,T} <: AbstractMatrix{T}
-    scales::Vector{T}
-    vecs1::NTuple{N,Vector{T}}
-    vecs2::NTuple{N,Vector{T}}
-end
-function LowRankMatrix(s, vs1, vs2)
-    T1 = promote_type(eltype.(vs1)...)
-    T2 = promote_type(eltype.(vs2)...)
-    T = promote_type(eltype(s), T1, T2)
-    N = length(vs1)
-    N == length(vs2) || throw(ArgumentError("Number of vectors must be the same"))
-    length(unique(length.(vs1))) == 1 || throw(ArgumentError("All vecs1 must have the same length"))
-    length(unique(length.(vs2))) == 1 || throw(ArgumentError("All vecs2 must have the same length"))
-    LowRankMatrix{N,T}(convert(Vector{T}, s), convert(NTuple{N,Vector{T}}, vs1), convert(NTuple{N,Vector{T}}, vs2))
-end
-Base.getindex(m::LowRankMatrix, i::Int, j::Int) = sum(s * v1[i] * conj(v2[j]) for (s, v1, v2) in zip(m.scales, m.vecs1, m.vecs2))
-Base.size(m::LowRankMatrix) = (length(first(m.vecs1)), length(first(m.vecs2)))
-Rank1Matrix(v1, v2) = LowRankMatrix([one(eltype(v1))], (v1,), (v2,))
-Base.:+(m1::LowRankMatrix{N1,T1}, m2::LowRankMatrix{N2,T2}) where {N1,T1,N2,T2} = LowRankMatrix{N1 + N2,promote_type(T1, T2)}(vcat(m1.scales, m2.scales), (m1.vecs1..., m2.vecs1...), (m1.vecs2..., m2.vecs2...))
-Base.:*(a::Number, m::LowRankMatrix) = LowRankMatrix(a * m.scales, m.vecs1, m.vecs2)
-Base.adjoint(m::LowRankMatrix{N,T}) where {N,T} = LowRankMatrix{N,T}(conj(m.scales), m.vecs2, m.vecs1)
-
 function abs_sign_mat!(m::Hermitian{T}; cutoff=10eps(real(T))) where T
     vals, vecs = eigen!(m)
     absvals::Vector{T} = abs.(vals)
@@ -173,9 +151,9 @@ function optimal_gauge(oeR, ::EigGauge, q)
 end
 
 function reduced_majoranas_properties(e, o, H::AbstractHilbertSpace, Hsub::AbstractHilbertSpace, gauge=FrobeniusGauge(); q=1, opt_kwargs=Dict())
-    eo = Rank1Matrix(e, o)
-    ee = Rank1Matrix(e, e)
-    oo = Rank1Matrix(o, o)
+    eo = LowRankMatrix(e, o)
+    ee = LowRankMatrix(e, e)
+    oo = LowRankMatrix(o, o)
     eoR = partial_trace(eo, H => Hsub)
     eeR = partial_trace(ee, H => Hsub)
     ooR = partial_trace(oo, H => Hsub)
