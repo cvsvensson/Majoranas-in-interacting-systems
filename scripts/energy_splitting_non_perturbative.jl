@@ -75,7 +75,7 @@ Uc = λ
 hRBsym = tc * f[r]' * f[b] + Δc * f[r] * f[b] + hc +
          Uc * f[b]' * f[b] * f[r]' * f[r]
 hRB = matrix_representation(hRBsym, spaces.HRB)
-ϵs = 2 * λ * range(-1, 1, 50)
+ϵs = 2 * λ * range(-1, 1, 100)
 reduced = reduced_majoranas_properties(gs_even, gs_odd, HS, HR, FrobeniusGauge(); q=2);
 @time energy_splitting_data = Folds.map(ϵs) do ϵ
     hB = matrix_representation(ϵ * f[only(B)]' * f[only(B)], spaces.HB)
@@ -91,11 +91,11 @@ pbounds = [d.p_bound for d in energy_splitting_data]
 energy_splitting_fig = with_theme(theme_aps()) do
     fig = Figure(size=150 .* (1.5, 1), figure_padding=5)
     ax = Axis(fig[1, 1]; xlabel=L"\varepsilon_d/ λ", limits=(nothing, (0, 1.1 * pbounds[1] / normalization)))
-    colors = [Cycled(2), Cycled(4), Cycled(1)]
+    colors = [Cycled(2), Cycled(4), Cycled(1), Cycled(6)]
     lines!(ax, ϵs ./ λ, pbounds ./ normalization, label=LaTeXString("Eq. (36)"); linestyle=(:dot, :dense), color=colors[1])
     lines!(ax, ϵs ./ λ, npbounds ./ normalization, label=LaTeXString("Eq. (35)"); linestyle=:dash, color=colors[2])
     lines!(ax, ϵs ./ λ, δEs ./ normalization, label=L"|\delta E| / λ"; linestyle=nothing, color=colors[3])
-    lines!(ax, ϵs ./ λ, δEs_full ./ normalization, label=L"|\delta Efull| / λ"; linestyle=nothing, color=:black)
+    lines!(ax, ϵs ./ λ, δEs_full ./ normalization, label=L"|\delta E_\mathrm{full}| / λ"; linestyle=nothing, color=colors[4])
     text!(fig.scene, 0.03, 0.84; text=LaTeXString("\\frac{E}{λ}"), space=:relative, fontsize=10)
     # text!(ax, 0.2, 0.7; text=L"Q_o = %$(round(reduced.LFmin; digits =3))", space=:relative)
     # text!(ax, 0.2, 0.55; text=L"Q_e = %$(round(reduced.LD; digits =3))", space=:relative)
@@ -104,7 +104,7 @@ energy_splitting_fig = with_theme(theme_aps()) do
 end
 ##
 save(plotsdir("energy_splitting_comparison_$N.pdf"), energy_splitting_fig)
-save(plotsdir("energy_splitting_comparison_$N.png"), energy_splitting_fig, px_per_unit=1.2)
+save(plotsdir("energy_splitting_comparison_$N.png"), energy_splitting_fig, px_per_unit=2.5)
 
 ##
 reduced.LFmin
