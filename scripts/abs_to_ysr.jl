@@ -128,7 +128,15 @@ fig = with_theme(theme_aps(linestyles=[nothing, :dash, :dot])) do
            label = L"\left|\partial_{\varepsilon_a} \delta E\right|",
            linestyle = (:dot, :dense),
            color = colors[3])
-    axislegend(ax; position = (0.1, 0.9))
+    Legend(
+        fig[1, 1], ax;
+        tellheight = false,
+        tellwidth = false,
+        margin = (10, 10, 10, 10),
+        rowgap = -2,
+        labelsize = 10,
+        halign = :left, valign = :top,
+    )
     fig
 end
 
