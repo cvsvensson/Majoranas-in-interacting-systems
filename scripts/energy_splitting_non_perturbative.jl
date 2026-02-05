@@ -1,6 +1,6 @@
 using DrWatson
 @quickactivate :ManybodyMajoranas
-using Folds
+using LinearAlgebra, Folds
 using UnPack, CairoMakie, MakiePublication, LaTeXStrings
 function calculate_bounds(hamiltonians, spaces, q)
     @unpack HS = spaces
@@ -23,8 +23,8 @@ function calculate_bounds(reduced, hamiltonians, spaces, q)
     if abs(heff.effops.ε) > 1e-6
         @warn "ε > 1e-6" (heff.effops.ε)
     end
-    vals_full, _ = blockeigen(embed(hS0, HS => HSB) + embed(hRB, HRB => HSB) + embed(hB, HB => HSB), HSB)
-    vals, vecs = blockeigen(heff.total_ham, spaces.HgsB)
+    vals_full, _ = blockeigen(Hermitian(embed(hS0, HS => HSB) + embed(hRB, HRB => HSB) + embed(hB, HB => HSB)), HSB)
+    vals, vecs = blockeigen(Hermitian(heff.total_ham), spaces.HgsB)
     n = div(size(vecs, 2), 2) # number of odd/even states
     odd_coupling, even_coupling = decompose_coupling(hRB, HRB, HR, HB)
     even_norm = schatten_norm(even_coupling, p)
@@ -36,7 +36,7 @@ function calculate_bounds(reduced, hamiltonians, spaces, q)
     OEBnorms = [schatten_norm(partial_trace(OE, spaces.HgsB => spaces.HB), q) for OE in OEs]
     pairs = map(CartesianIndex, enumerate(map(v -> argmax(v), eachrow(overlaps1))))
     δEs = map(es -> -(es...), Base.product(vals[1:n], vals[n+1:2n]))
-    δEs_full = abs(vals_full[1] - vals_full[div(length(vals_full), 2)+1])
+    δEs_full = map(es -> -(es...), Base.product(vals_full[1:n], vals_full[div(length(vals_full), 2).+(1:n)]))
     np_bound = (reduced.LD * even_norm .+ reduced.LFmin * odd_norm * OEBnorms) ./ overlaps1
     p_bound = sqrt(dim(spaces.HB)) * (reduced.LD * even_norm + reduced.LFmin * odd_norm)
     (; heff, δEs, δEs_full, p_bound, np_bound, even_norm, odd_norm, vals, vecs, pairs, overlaps1, OEBnorms)
@@ -54,48 +54,67 @@ qn = ParityConservation()
 spaces = hilbert_spaces(S, R, B, qn)
 @unpack HS, HB, HR, HSB, HRB = spaces
 ##
-@time params = energy_splitting_parameters(HS)
+params = energy_splitting_parameters(HS)
 # params = (; params..., μ=round.(params.μ; digits=4))
 symham = kitaev_hamiltonian(f, HS; params...)
 hS = matrix_representation(symham, HS)
-vals, vecs = blockeigen(hS, HS)
+vals, vecs = blockeigen(Hermitian(hS), HS)
 nSB = div(size(vecs, 2), 2)
 gs_odd = vecs[:, 1]
 gs_even = vecs[:, nSB+1]
 exc_gap = minimum([abs(vals[2] - vals[1]), abs(vals[nSB+2] - vals[nSB+1])]) # excitation gap
 gapratio = abs((vals[1] - vals[nSB+1]) / exc_gap)
 @assert gapratio < 1e-8 "Not degenerate: gapratio = $gapratio"
-
+q = 2
+reduced = reduced_majoranas_properties(gs_even, gs_odd, HS, HR, FrobeniusGauge(); q);
 ## vary dot level
-λ = 0.5 * global_parameters.t
+λstrong = 0.5 * global_parameters.t
 θ = pi / 6
-tc = λ * cos(θ)
-Δc = λ * sin(θ)
-Uc = λ
+tc = λstrong * cos(θ)
+Δc = λstrong * sin(θ)
+Uc = λstrong
 hRBsym = tc * f[r]' * f[b] + Δc * f[r] * f[b] + hc +
          Uc * f[b]' * f[b] * f[r]' * f[r]
 hRB = matrix_representation(hRBsym, spaces.HRB)
-ϵs = 2 * λ * range(-1, 1, 100)
-reduced = reduced_majoranas_properties(gs_even, gs_odd, HS, HR, FrobeniusGauge(); q=2);
-@time energy_splitting_data = Folds.map(ϵs) do ϵ
+ϵs_strong = 2 * λstrong * range(-1, 1, 50)
+@time energy_splitting_data_strong = Folds.map(ϵs_strong) do ϵ
     hB = matrix_representation(ϵ * f[only(B)]' * f[only(B)], spaces.HB)
     hamiltonians = (; hS0=hS, hS=hS, hB=hB, hRB=hRB)
-    calculate_bounds(reduced, hamiltonians, spaces, 2)
+    calculate_bounds(reduced, hamiltonians, spaces, q)
+    # calculate_bounds(hamiltonians, spaces, 2)
 end;
 ##
-δEs = [abs(d.δEs[1, 1]) for d in energy_splitting_data]
-δEs_full = [abs(d.δEs_full[1, 1]) for d in energy_splitting_data]
-normalization = λ
-npbounds = [d.np_bound[1, 1] for d in energy_splitting_data]
-pbounds = [d.p_bound for d in energy_splitting_data]
+λweak = 0.1e-8 * global_parameters.t
+tc = λweak * cos(θ)
+Δc = λweak * sin(θ)
+Uc = λweak
+hRBsym = tc * f[r]' * f[b] + Δc * f[r] * f[b] + hc +
+         Uc * f[b]' * f[b] * f[r]' * f[r]
+hRB = matrix_representation(hRBsym, spaces.HRB)
+ϵs_weak = 2 * λweak * range(-1, 1, 50)
+@time energy_splitting_data_weak = Folds.map(ϵs_weak) do ϵ
+    hB = matrix_representation(ϵ * f[only(B)]' * f[only(B)], spaces.HB)
+    hamiltonians = (; hS0=hS, hS=hS, hB=hB, hRB=hRB)
+    calculate_bounds(reduced, hamiltonians, spaces, q)
+    # calculate_bounds(hamiltonians, spaces, 2)
+end;
+##
+δEs_weak = [abs(d.δEs_full[1, 1]) for d in energy_splitting_data_weak]
+# δEs_weak = [abs(d.δEs[1, 1]) for d in energy_splitting_data_weak]
+δEs_strong = [abs(d.δEs_full[1, 1]) for d in energy_splitting_data_strong]
+npbounds_strong = [d.np_bound[1, 1] for d in energy_splitting_data_strong]
+pbounds_strong = [d.p_bound for d in energy_splitting_data_strong]
+npbounds_weak = [d.np_bound[1, 1] for d in energy_splitting_data_weak]
+pbounds_weak = [d.p_bound for d in energy_splitting_data_weak]
 energy_splitting_fig = with_theme(theme_aps()) do
     fig = Figure(size=150 .* (1.5, 1), figure_padding=5)
-    ax = Axis(fig[1, 1]; xlabel=L"\varepsilon_d/ λ", limits=(nothing, (0, 1.1 * pbounds[1] / normalization)))
+    ax = Axis(fig[1, 1]; xlabel=L"\varepsilon_d/ λ", limits=(nothing, (0, 1.1 * pbounds_strong[1] / λstrong)))
     colors = [Cycled(2), Cycled(4), Cycled(1), Cycled(6)]
-    lines!(ax, ϵs ./ λ, pbounds ./ normalization, label=LaTeXString("Eq. (36)"); linestyle=(:dot, :dense), color=colors[1])
-    lines!(ax, ϵs ./ λ, npbounds ./ normalization, label=LaTeXString("Eq. (35)"); linestyle=:dash, color=colors[2])
-    lines!(ax, ϵs ./ λ, δEs ./ normalization, label=L"|\delta E| / λ"; linestyle=nothing, color=colors[3])
-    lines!(ax, ϵs ./ λ, δEs_full ./ normalization, label=L"|\delta E_\mathrm{full}| / λ"; linestyle=nothing, color=colors[4])
+    lines!(ax, ϵs_strong ./ λstrong, pbounds_strong ./ λstrong, label=LaTeXString("Eq. (36)"); linestyle=(:dot, :dense), color=colors[1])
+    lines!(ax, ϵs_strong ./ λstrong, npbounds_strong ./ λstrong, label=LaTeXString("Eq. (35)"); linestyle=:dash, color=colors[2])
+    lines!(ax, ϵs_weak ./ λweak, npbounds_weak ./ λweak, label=LaTeXString("Eq. (35) weak"); linestyle=:dashdot, color=colors[2])
+    lines!(ax, ϵs_weak ./ λweak, δEs_weak ./ λweak, label=L"|\delta E_\mathrm{weak}| / λ"; linestyle=nothing, color=colors[3])
+    lines!(ax, ϵs_strong ./ λstrong, δEs_strong ./ λstrong, label=L"|\delta E_\mathrm{strong}| / λ"; linestyle=nothing, color=colors[4])
     text!(fig.scene, 0.03, 0.84; text=LaTeXString("\\frac{E}{λ}"), space=:relative, fontsize=10)
     # text!(ax, 0.2, 0.7; text=L"Q_o = %$(round(reduced.LFmin; digits =3))", space=:relative)
     # text!(ax, 0.2, 0.55; text=L"Q_e = %$(round(reduced.LD; digits =3))", space=:relative)
