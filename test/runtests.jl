@@ -56,7 +56,7 @@ using Random: seed!
     gs_even = vecs[:, n+1]
     odd_eigenstates, even_eigenstates = vecs.blocks
     overlaps1 = odd_eigenstates' * γgsBmin[1:n, n+1:2n] * even_eigenstates
-    overlaps2 = odd_eigenstates' * 1im * γgsBmax[1:n, n+1:2n] * even_eigenstates 
+    overlaps2 = odd_eigenstates' * 1im * γgsBmax[1:n, n+1:2n] * even_eigenstates
     δEs = map(es -> -(es...), Base.product(vals[1:n], vals[n+1:2n]))
     ε = heff.effops.ε
 
@@ -83,8 +83,8 @@ end
 
     @fermions f
     hS0 = random_hamiltonian(HS)
-    hB0 = 0 * random_hamiltonian(HB)
-    hRB0 = 0 * random_hamiltonian(HRB)
+    hB0 = random_hamiltonian(HB)
+    hRB0 = random_hamiltonian(HRB)
 
     hams = (; hS0=hS0, hS=hS0, hB=hB0, hRB=hRB0)
     canon_hams = canonicalize_hamiltonians(hams, spaces)
@@ -102,13 +102,17 @@ end
     ε = heff.effops.ε
 
     γSBmin, γSBmax = map(γ -> embed(γ, HS => HSB), γS)
-    P = embed(γSmin^2, HS => HSB)
+    PS = γSmin^2
+    P = embed(PS, HS => HSB)
     @test P^2 ≈ P
-    G = embed(heff.effops.G, HB => HSB)
-    Fmin = embed(heff.effops.Fmin, HB => HSB)
-    Fmax = embed(heff.effops.Fmax, HB => HSB)
-    h = ((ε * I + G) * 1im * γSBmin * γSBmax + γSBmin * Fmin + γSBmax * Fmax) / 2 + embed(hB, HB => HSB)
-    @test P * h * P ≈ h
+    @test P * γSBmin ≈ γSBmin
+    @test P * γSBmax ≈ γSBmax
+    G = tensor_product((PS, heff.effops.G), (HS, HB) => HSB)
+    @test P * G * P ≈ G
+    Fmin = tensor_product((PS, heff.effops.Fmin), (HS, HB) => HSB)
+    Fmax = tensor_product((PS, heff.effops.Fmax), (HS, HB) => HSB)
+    heff_full_space = ((ε * I + G) * 1im * γSBmin * γSBmax + γSBmin * Fmin + γSBmax * Fmax) / 2 + tensor_product((PS, hB), (HS, HB) => HSB)
+    @test P * heff_full_space * P ≈ heff_full_space
     h2 = embed(hS, HS => HSB) + embed(hRB, HRB => HSB) + embed(hB, HB => HSB)
 end
 
