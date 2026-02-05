@@ -23,13 +23,16 @@ function effective_operators((γmin, γmax), hS, hSB, spaces)
     Fmax = partial_trace(γSBmax * hSB, HSB => HB)
     G = partial_trace(δρ * hSB, HSB => HB) |> Hermitian
     ε = real(tr(1im * γmax * γmin * hS))
-    return (; Fmin, Fmax, G, ε)
+    P = γSBmin^2
+    B = partial_trace(P * hSB, HSB => HB)
+    return (; Fmin, Fmax, G, ε, B)
 end
 
 function effective_hamiltonian_parts((γmin, γmax), effective_operators, HS, HSB, HB)
-    @unpack Fmin, Fmax, G, ε = effective_operators
+    @unpack Fmin, Fmax, G, ε, B = effective_operators
     tp = tensor_product((HS, HB) => HSB)
-    hgsB = (tp(γmin, Fmin) + tp(γmax, Fmax) + tp(1im * γmax * γmin, G)) / 2
+    PS = γmin^2
+    hgsB = (tp(γmin, Fmin) + tp(γmax, Fmax) + tp(1im * γmax * γmin, G) + tp(PS, B)) / 2
     hgs = ε * 1im * γmax * γmin / 2
     return hgs, hgsB
 end
@@ -151,9 +154,9 @@ function optimal_gauge(oeR, ::EigGauge, q)
 end
 
 function reduced_majoranas_properties(e, o, H::AbstractHilbertSpace, Hsub::AbstractHilbertSpace, gauge=FrobeniusGauge(); q=1, opt_kwargs=Dict())
-    eo = LowRankMatrix(e, o)
-    ee = LowRankMatrix(e, e)
-    oo = LowRankMatrix(o, o)
+    eo = LowRankMatrix(e, conj(o))
+    ee = LowRankMatrix(e, conj(e))
+    oo = LowRankMatrix(o, conj(o))
     eoR = partial_trace(eo, H => Hsub)
     eeR = partial_trace(ee, H => Hsub)
     ooR = partial_trace(oo, H => Hsub)

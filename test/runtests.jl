@@ -96,13 +96,19 @@ end
     vals, vecs = blockeigen(hS, HS)
     gs_odd = vecs[:, 1]
     gs_even = vecs[:, div(size(vecs, 2), 2)+1]
+    PSgs = gs_odd * gs_odd' + gs_even * gs_even'
     reduced = reduced_majoranas_properties(gs_even, gs_odd, HS, HR; q)
     (γSmin, γSmax) = γS = reduced[[:γmin, :γmax]]
+    @test PSgs * γSmin ≈ γSmin
+    @test PSgs * γSmax ≈ γSmax
+    @test ManybodyMajoranas.LowRankMatrix(gs_odd, conj(gs_even)) ≈ gs_odd * gs_even'
+
     heff = effective_hamiltonian(canon_hams, spaces, γS)
     ε = heff.effops.ε
 
     γSBmin, γSBmax = map(γ -> embed(γ, HS => HSB), γS)
     PS = γSmin^2
+    @test PSgs ≈ PS
     P = embed(PS, HS => HSB)
     @test P^2 ≈ P
     @test P * γSBmin ≈ γSBmin
@@ -111,8 +117,32 @@ end
     @test P * G * P ≈ G
     Fmin = tensor_product((PS, heff.effops.Fmin), (HS, HB) => HSB)
     Fmax = tensor_product((PS, heff.effops.Fmax), (HS, HB) => HSB)
-    heff_full_space = ((ε * I + G) * 1im * γSBmin * γSBmax + γSBmin * Fmin + γSBmax * Fmax) / 2 + tensor_product((PS, hB), (HS, HB) => HSB)
-    @test P * heff_full_space * P ≈ heff_full_space
-    h2 = embed(hS, HS => HSB) + embed(hRB, HRB => HSB) + embed(hB, HB => HSB)
+    B = tensor_product((PS, heff.effops.B), (HS, HB) => HSB)
+
+    heff_SB = (G * 1im * γSBmax * γSBmin + γSBmin * Fmin + γSBmax * Fmax + B) / 2
+    hSB = embed(hRB, HRB => HSB)
+    phSB = P * embed(hRB, HRB => HSB) * P
+
+    @test partial_trace(heff_SB * γSBmin, HSB => HB) ≈ partial_trace(hSB * γSBmin, HSB => HB)
+    @test partial_trace(heff_SB * γSBmax, HSB => HB) ≈ partial_trace(hSB * γSBmax, HSB => HB)
+    @test partial_trace(heff_SB * 1im * γSBmax * γSBmin, HSB => HB) ≈ partial_trace(hSB * 1im * γSBmax * γSBmin, HSB => HB)
+    @test partial_trace(heff_SB * γSBmin, HSB => HB) ≈ partial_trace(phSB * γSBmin, HSB => HB)
+    @test partial_trace(heff_SB * γSBmax, HSB => HB) ≈ partial_trace(phSB * γSBmax, HSB => HB)
+    @test partial_trace(heff_SB * 1im * γSBmax * γSBmin, HSB => HB) ≈ partial_trace(phSB * 1im * γSBmax * γSBmin, HSB => HB)
+    # @test partial_trace(heff_SB, HSB => HB) - partial_trace(hSB, HSB => HB) |> norm
+    @test partial_trace(heff_SB, HSB => HB) ≈ partial_trace(phSB, HSB => HB)
+
+    heff_S = ε * 1im * γSBmax * γSBmin / 2 + P * tr(PS * hS) / tr(PS)  #P * embed(hS, HS => HSB)
+    @test partial_trace(heff_S * 1im * γSBmax * γSBmin, HSB => HB) ≈ partial_trace(P * embed(hS, HS => HSB) * P * 1im * γSBmax * γSBmin, HSB => HB)
+    @test partial_trace(heff_S, HSB => HB) ≈ partial_trace(P * embed(hS, HS => HSB) * P, HSB => HB)
+    @test P * embed(hS, HS => HSB) * P ≈ heff_S
+
+    heff_B = tensor_product((PS, hB), (HS, HB) => HSB)
+    @test P * embed(hB, HB => HSB) * P ≈ heff_B
+
+    heff_full = heff_S + heff_B + heff_SB
+    @test P * heff_full * P ≈ heff_full
+    @test P * h * P ≈ heff_full
 end
+
 
