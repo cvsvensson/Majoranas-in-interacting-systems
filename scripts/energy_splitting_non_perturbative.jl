@@ -76,31 +76,28 @@ Uc = λstrong
 hRBsym = tc * f[r]' * f[b] + Δc * f[r] * f[b] + hc +
          Uc * f[b]' * f[b] * f[r]' * f[r]
 hRB = matrix_representation(hRBsym, spaces.HRB)
-ϵs_strong = 2 * λstrong * range(-1, 1, 50)
+ϵs_strong = 2 * λstrong * range(-1, 1, 200)
 @time energy_splitting_data_strong = Folds.map(ϵs_strong) do ϵ
     hB = matrix_representation(ϵ * f[only(B)]' * f[only(B)], spaces.HB)
     hamiltonians = (; hS0=hS, hS=hS, hB=hB, hRB=hRB)
     calculate_bounds(reduced, hamiltonians, spaces, q)
-    # calculate_bounds(hamiltonians, spaces, 2)
 end;
 ##
-λweak = 0.1e-8 * global_parameters.t
+λweak = 0.01 * global_parameters.t
 tc = λweak * cos(θ)
 Δc = λweak * sin(θ)
 Uc = λweak
 hRBsym = tc * f[r]' * f[b] + Δc * f[r] * f[b] + hc +
          Uc * f[b]' * f[b] * f[r]' * f[r]
 hRB = matrix_representation(hRBsym, spaces.HRB)
-ϵs_weak = 2 * λweak * range(-1, 1, 50)
+ϵs_weak = 2 * λweak * range(-1, 1, 200)
 @time energy_splitting_data_weak = Folds.map(ϵs_weak) do ϵ
     hB = matrix_representation(ϵ * f[only(B)]' * f[only(B)], spaces.HB)
     hamiltonians = (; hS0=hS, hS=hS, hB=hB, hRB=hRB)
     calculate_bounds(reduced, hamiltonians, spaces, q)
-    # calculate_bounds(hamiltonians, spaces, 2)
 end;
 ##
 δEs_weak = [abs(d.δEs_full[1, 1]) for d in energy_splitting_data_weak]
-# δEs_weak = [abs(d.δEs[1, 1]) for d in energy_splitting_data_weak]
 δEs_strong = [abs(d.δEs_full[1, 1]) for d in energy_splitting_data_strong]
 npbounds_strong = [d.np_bound[1, 1] for d in energy_splitting_data_strong]
 pbounds_strong = [d.p_bound for d in energy_splitting_data_strong]
@@ -112,7 +109,6 @@ energy_splitting_fig = with_theme(theme_aps()) do
     colors = [Cycled(2), Cycled(4), Cycled(1), Cycled(6)]
     lines!(ax, ϵs_strong ./ λstrong, pbounds_strong ./ λstrong, label=LaTeXString("Eq. (36)"); linestyle=(:dot, :dense), color=colors[1])
     lines!(ax, ϵs_strong ./ λstrong, npbounds_strong ./ λstrong, label=LaTeXString("Eq. (35)"); linestyle=:dash, color=colors[2])
-    lines!(ax, ϵs_weak ./ λweak, npbounds_weak ./ λweak, label=LaTeXString("Eq. (35) weak"); linestyle=:dashdot, color=colors[2])
     lines!(ax, ϵs_weak ./ λweak, δEs_weak ./ λweak, label=L"|\delta E_\mathrm{weak}| / λ"; linestyle=nothing, color=colors[3])
     lines!(ax, ϵs_strong ./ λstrong, δEs_strong ./ λstrong, label=L"|\delta E_\mathrm{strong}| / λ"; linestyle=nothing, color=colors[4])
     text!(fig.scene, 0.03, 0.84; text=LaTeXString("\\frac{E}{λ}"), space=:relative, fontsize=10)
