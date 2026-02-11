@@ -108,12 +108,11 @@ figsize = 150 .* (1.5, 1)
 fig = with_theme(theme_aps(linestyles=[nothing, :dash, :dot])) do
     fig = Figure(
         size = figsize,
-        figure_padding = 10,
+        figure_padding = (20, 10, 10, 10),
     )
     ax = Axis(
         fig[1, 1];
         xlabel = L"t/\Delta_H",
-        ylabel = "Quality measures",
     )
     colors = [Cycled(2), Cycled(4), Cycled(1)]
     ax.xgridvisible = false
@@ -137,6 +136,7 @@ fig = with_theme(theme_aps(linestyles=[nothing, :dash, :dot])) do
         labelsize = 10,
         halign = :left, valign = :top,
     )
+    text!(fig.scene, 0.01, 0.85; text=LaTeXString("(b)"), space=:relative, fontsize=10)
     fig
 end
 
