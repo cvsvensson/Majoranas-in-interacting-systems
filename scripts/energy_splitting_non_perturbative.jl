@@ -23,23 +23,32 @@ function calculate_bounds(reduced, hamiltonians, spaces, q)
     if abs(heff.effops.ε) > 1e-6
         @warn "ε > 1e-6" (heff.effops.ε)
     end
-    vals_full, _ = blockeigen(Hermitian(embed(hS0, HS => HSB) + embed(hRB, HRB => HSB) + embed(hB, HB => HSB)), HSB)
-    vals, vecs = blockeigen(Hermitian(heff.total_ham), spaces.HgsB)
-    n = div(size(vecs, 2), 2) # number of odd/even states
     odd_coupling, even_coupling = decompose_coupling(hRB, HRB, HR, HB)
+    vals_full, vecs_full = blockeigen(Hermitian(embed(hS0, HS => HSB) + embed(hRB, HRB => HSB) + embed(hB, HB => HSB)), HSB)
+    vals, vecs = blockeigen(Hermitian(heff.total_ham), spaces.HgsB)
+    γeff = [embed(γ, spaces.Hgs => spaces.HgsB) for γ in heff.γgs]
+    γfull = [embed(γ, spaces.HS => spaces.HSB) for γ in (reduced.γmin, reduced.γmax)]
+    # γgsBmin, _ = [embed(γ, spaces.Hgs => spaces.HgsB) for γ in heff.γgs]
+    eff = calculate_bounds(reduced, vals, vecs, odd_coupling, even_coupling, γeff, spaces.Hgs, spaces.HB, spaces.HgsB, q, p)
+    full = calculate_bounds(reduced, vals_full, vecs_full, odd_coupling, even_coupling, γfull, spaces.HS, spaces.HB, spaces.HSB, q, p)
+    (; heff, eff, full)
+end
+
+function calculate_bounds(reduced, vals, vecs, odd_coupling, even_coupling, (γmin, γmax), HS, HB, HSB, q, p; dn=4)
+    n = div(size(vecs, 2), 2) # number of odd/even states
+    dn = min(dn, n)
     even_norm = schatten_norm(even_coupling, p)
     odd_norm = schatten_norm(odd_coupling, p)
-    odd_states, even_states = vecs.blocks
-    γgsBmin, _ = [embed(γ, spaces.Hgs => spaces.HgsB) for γ in heff.γgs]
-    overlaps1 = abs.(odd_states' * γgsBmin[1:n, n+1:2n] * even_states)
-    OEs = [E * O' for (O, E) in Base.product(eachcol(vecs[:, 1:n]), eachcol(vecs[:, n+1:end]))]
-    OEBnorms = [schatten_norm(partial_trace(OE, spaces.HgsB => spaces.HB), q) for OE in OEs]
+    odd_states, even_states = map(states -> states[:, 1:dn], vecs.blocks)
+    overlaps1 = abs.(odd_states' * γmin[1:n, n+1:2n] * even_states)
+    OEs = [E * O' for (O, E) in Base.product(eachcol(vecs[:, 1:dn]), eachcol(vecs[:, n+1:n+dn]))]
+    OEBnorms = [schatten_norm(partial_trace(OE, HSB => HB), q) for OE in OEs]
     pairs = map(CartesianIndex, enumerate(map(v -> argmax(v), eachrow(overlaps1))))
-    δEs = map(es -> -(es...), Base.product(vals[1:n], vals[n+1:2n]))
-    δEs_full = map(es -> -(es...), Base.product(vals_full[1:n], vals_full[div(length(vals_full), 2).+(1:n)]))
+    δEs = map(es -> -(es...), Base.product(vals[1:dn], vals[n+1:n+dn]))
+    # δEs_full = map(es -> -(es...), Base.product(vals_full[1:n], vals_full[div(length(vals_full), 2).+(1:n)]))
     np_bound = (reduced.LD * even_norm .+ reduced.LFmin * odd_norm * OEBnorms) ./ overlaps1
-    p_bound = sqrt(dim(spaces.HB)) * (reduced.LD * even_norm + reduced.LFmin * odd_norm)
-    (; heff, δEs, δEs_full, p_bound, np_bound, even_norm, odd_norm, vals, vecs, pairs, overlaps1, OEBnorms)
+    p_bound = sqrt(dim(HB)) * (reduced.LD * even_norm + reduced.LFmin * odd_norm)
+    (; δEs, p_bound, np_bound, even_norm, odd_norm, vals, vecs, pairs, overlaps1, OEBnorms)
 end
 
 ##
@@ -67,16 +76,17 @@ gapratio = abs((vals[1] - vals[nSB+1]) / exc_gap)
 @assert gapratio < 1e-8 "Not degenerate: gapratio = $gapratio"
 q = 2
 reduced = reduced_majoranas_properties(gs_even, gs_odd, HS, HR, FrobeniusGauge(); q);
+u = 1
 ## vary dot level
 λstrong = 0.5 * global_parameters.t
 θ = pi / 6
 tc = λstrong * cos(θ)
 Δc = λstrong * sin(θ)
-Uc = λstrong
+Uc = λstrong * u
 hRBsym = tc * f[r]' * f[b] + Δc * f[r] * f[b] + hc +
          Uc * f[b]' * f[b] * f[r]' * f[r]
 hRB = matrix_representation(hRBsym, spaces.HRB)
-ϵs_strong = 2 * λstrong * range(-1, 1, 200)
+ϵs_strong = 2 * λstrong * range(-1, 1, 100)
 @time energy_splitting_data_strong = Folds.map(ϵs_strong) do ϵ
     hB = matrix_representation(ϵ * f[only(B)]' * f[only(B)], spaces.HB)
     hamiltonians = (; hS0=hS, hS=hS, hB=hB, hRB=hRB)
@@ -86,37 +96,79 @@ end;
 λweak = 0.01 * global_parameters.t
 tc = λweak * cos(θ)
 Δc = λweak * sin(θ)
-Uc = λweak
+Uc = λweak * u
 hRBsym = tc * f[r]' * f[b] + Δc * f[r] * f[b] + hc +
          Uc * f[b]' * f[b] * f[r]' * f[r]
 hRB = matrix_representation(hRBsym, spaces.HRB)
-ϵs_weak = 2 * λweak * range(-1, 1, 200)
+ϵs_weak = 2 * λweak * range(-1, 1, 100)
 @time energy_splitting_data_weak = Folds.map(ϵs_weak) do ϵ
     hB = matrix_representation(ϵ * f[only(B)]' * f[only(B)], spaces.HB)
     hamiltonians = (; hS0=hS, hS=hS, hB=hB, hRB=hRB)
     calculate_bounds(reduced, hamiltonians, spaces, q)
 end;
 ##
-δEs_weak = [abs(d.δEs_full[1, 1]) for d in energy_splitting_data_weak]
-δEs_strong = [abs(d.δEs_full[1, 1]) for d in energy_splitting_data_strong]
-npbounds_strong = [d.np_bound[1, 1] for d in energy_splitting_data_strong]
-pbounds_strong = [d.p_bound for d in energy_splitting_data_strong]
-npbounds_weak = [d.np_bound[1, 1] for d in energy_splitting_data_weak]
-pbounds_weak = [d.p_bound for d in energy_splitting_data_weak]
+δEs_weak = [abs(d.full.δEs[1, 1]) for d in energy_splitting_data_weak]
+δEs_strong = [abs(d.full.δEs[1, 1]) for d in energy_splitting_data_strong]
+npbounds_strong = [d.full.np_bound[1, 1] for d in energy_splitting_data_strong]
+pbounds_strong = [d.full.p_bound for d in energy_splitting_data_strong]
+npbounds_weak = [d.full.np_bound[1, 1] for d in energy_splitting_data_weak]
+pbounds_weak = [d.full.p_bound for d in energy_splitting_data_weak]
+# energy_splitting_fig = with_theme(theme_aps()) do
+#     fig = Figure(size=150 .* (1.5, 1), figure_padding=5)
+#     ax = Axis(fig[1, 1]; xlabel=L"\varepsilon_d/ λ", limits=(nothing, (0, 1.1 * pbounds_strong[1] / λstrong)))
+#     colors = [Cycled(2), Cycled(4), Cycled(1), Cycled(6)]
+#     lines!(ax, ϵs_strong ./ λstrong, pbounds_strong ./ λstrong, label=LaTeXString("Eq. (36)"); linestyle=(:dot, :dense), color=colors[1])
+#     lines!(ax, ϵs_strong ./ λstrong, npbounds_strong ./ λstrong, label=LaTeXString("Eq. (35)"); linestyle=:dash, color=colors[2])
+#     lines!(ax, ϵs_weak ./ λweak, npbounds_weak ./ λweak, label=LaTeXString("Eq. (35) weak"); linestyle=:dash, color=colors[2])
+#     lines!(ax, ϵs_weak ./ λweak, δEs_weak ./ λweak, label=L"|\delta E_\mathrm{weak}| / λ"; linestyle=nothing, color=colors[3])
+#     lines!(ax, ϵs_strong ./ λstrong, δEs_strong ./ λstrong, label=L"|\delta E_\mathrm{strong}| / λ"; linestyle=nothing, color=colors[4])
+#     text!(fig.scene, 0.03, 0.84; text=LaTeXString("\\frac{E}{λ}"), space=:relative, fontsize=10)
+#     # text!(ax, 0.2, 0.7; text=L"Q_o = %$(round(reduced.LFmin; digits =3))", space=:relative)
+#     # text!(ax, 0.2, 0.55; text=L"Q_e = %$(round(reduced.LD; digits =3))", space=:relative)
+#     axislegend(ax; position=(0.9, 0.75))
+#     fig
+# end
+##
 energy_splitting_fig = with_theme(theme_aps()) do
-    fig = Figure(size=150 .* (1.5, 1), figure_padding=5)
-    ax = Axis(fig[1, 1]; xlabel=L"\varepsilon_d/ λ", limits=(nothing, (0, 1.1 * pbounds_strong[1] / λstrong)))
+    fig = Figure(size=140 .* (1.8, 1), figure_padding=3)
+    titlesize = 12
+    # Weak coupling subplot
+    ax_weak = Axis(fig[1, 1];
+        xlabel=L"\varepsilon_d / λ",
+        ylabel=L"E / λ",
+        limits=(nothing, (0, 1.1 * pbounds_weak[1] / λweak)),
+        title=L"λ = t/100",
+        titlesize)
     colors = [Cycled(2), Cycled(4), Cycled(1), Cycled(6)]
-    lines!(ax, ϵs_strong ./ λstrong, pbounds_strong ./ λstrong, label=LaTeXString("Eq. (36)"); linestyle=(:dot, :dense), color=colors[1])
-    lines!(ax, ϵs_strong ./ λstrong, npbounds_strong ./ λstrong, label=LaTeXString("Eq. (35)"); linestyle=:dash, color=colors[2])
-    lines!(ax, ϵs_weak ./ λweak, δEs_weak ./ λweak, label=L"|\delta E_\mathrm{weak}| / λ"; linestyle=nothing, color=colors[3])
-    lines!(ax, ϵs_strong ./ λstrong, δEs_strong ./ λstrong, label=L"|\delta E_\mathrm{strong}| / λ"; linestyle=nothing, color=colors[4])
-    text!(fig.scene, 0.03, 0.84; text=LaTeXString("\\frac{E}{λ}"), space=:relative, fontsize=10)
-    # text!(ax, 0.2, 0.7; text=L"Q_o = %$(round(reduced.LFmin; digits =3))", space=:relative)
-    # text!(ax, 0.2, 0.55; text=L"Q_e = %$(round(reduced.LD; digits =3))", space=:relative)
-    axislegend(ax; position=(0.9, 0.75))
+
+    lines!(ax_weak, ϵs_weak ./ λweak, pbounds_weak ./ λweak,
+        label=LaTeXString("Eq.\\,(36)"); linestyle=(:dot, :dense), color=colors[1])
+    lines!(ax_weak, ϵs_weak ./ λweak, npbounds_weak ./ λweak,
+        label=LaTeXString("Eq.\\,(35)"); linestyle=:dash, color=colors[2])
+    lines!(ax_weak, ϵs_weak ./ λweak, δEs_weak ./ λweak,
+        label=L"|\delta E| / λ"; linestyle=nothing, color=colors[3])
+
+    # text!(fig.scene, 0.03, 0.84; text=LaTeXString("\\frac{E}{λ}"),
+    #     space=:relative, fontsize=10)
+    axislegend(ax_weak; position=(1.05, 0.75))
+
+    # Strong coupling subplot
+    ax_strong = Axis(fig[1, 2];
+        xlabel=L"\varepsilon_d / λ",
+        limits=(nothing, (0, 1.1 * pbounds_strong[1] / λstrong)),
+        title=L"λ = t/2", titlesize)
+    hideydecorations!(ax_strong; ticks=false, minorticks=false)
+
+    lines!(ax_strong, ϵs_strong ./ λstrong, pbounds_strong ./ λstrong,
+        label=LaTeXString("Eq. (36)"); linestyle=(:dot, :dense), color=colors[1])
+    lines!(ax_strong, ϵs_strong ./ λstrong, npbounds_strong ./ λstrong,
+        label=LaTeXString("Eq. (35)"); linestyle=:dash, color=colors[2])
+    lines!(ax_strong, ϵs_strong ./ λstrong, δEs_strong ./ λstrong,
+        label=L"|\delta E| / λ"; linestyle=nothing, color=colors[3])
+
     fig
 end
+
 ##
 save(plotsdir("energy_splitting_comparison_$N.pdf"), energy_splitting_fig)
 save(plotsdir("energy_splitting_comparison_$N.png"), energy_splitting_fig, px_per_unit=2.5)
