@@ -58,6 +58,7 @@ rms_data2 = (; y=rms, x=σs, Q=Qe, prefactor=sqrt(N), label=rms_data.label)
 wsave(datadir("int_kitaev_disorder_$N.jld2"), Dict("energy_splittings" => energy_splittings, "σs" => σs, "εs" => εs, "params" => params, "rms" => rms_data, "abs" => abs_data, "rms2" => rms_data2))
 ##
 disorder_data = wload(datadir("int_kitaev_disorder_$N.jld2"))
+
 ## plotting
 disorder_fig = with_theme(theme_aps()) do
     normalization = disorder_data["params"].t
@@ -66,17 +67,26 @@ disorder_fig = with_theme(theme_aps()) do
     xs = σs / normalization
     ys = data.y / normalization
     Q = data.Q / normalization
-
     fig = Figure(size=110 .* (2, 1), figure_padding=6)
-    ax = Axis(fig[1, 1], xlabel=L"\sigma/t", ylabel=L"E/t")
+    ax = Axis(fig[1, 1], xlabel=L"\sigma/t", ylabel=L"E/t", xlabelpadding=1)
     ylims!(ax, 0, 1.1 * maximum(ys))
     xlims!(ax, 0, maximum(xs))
     # lines!(ax, xs, ys; label=L"\overline{|\delta E|}", color=Cycled(1), linewidth=3)
-    lines!(ax, xs, ys; label=data.label, color=Cycled(1), linewidth=3)
-    lines!(ax, σs, σs * Q * data.prefactor / normalization, label="1:st order bound"; linestyle=:dash, color=Cycled(4), linewidth=3)
-    axislegend(ax, position=(:left, :top), labelsize=10)
+    lines!(ax, xs, ys; label=data.label, color=Cycled(1), linewidth=1.5)
+    lines!(ax, σs, σs * Q * data.prefactor / normalization, label="Eq. (38)"; linestyle=:dash, color=Cycled(4), linewidth=1.5)
+    # axislegend(ax, position=(:left, :top), labelsize=8)
+    Legend(
+        fig[1, 1], ax;
+        tellheight = false,
+        tellwidth = false,
+        margin = (10, 10, 10, 10),
+        rowgap = -4,
+        labelsize = 8,
+        halign = :left, valign = :top,
+    )
     fig
 end
+
 ##
 save(plotsdir("disorder_$N.pdf"), disorder_fig)
 save(plotsdir("disorder_$N.png"), disorder_fig, px_per_unit=2.5)
