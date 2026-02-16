@@ -80,16 +80,17 @@ function quality_measures(reduced_dict)
 end
 
 ts = range(0.1, 1.2, 20)
+q = 2
 sweet_spots = Folds.map(ts) do x
     _params = (; params..., μ=(; L=params.EZ.L, H=0Δ0, R=params.EZ.R), t=x * Δ0)
     symham = symbolic_hamiltonian(; _params...)
     ham0 = matrix_representation(symham, H)
     num_ops = [matrix_representation(c[n, :↑]'c[n, :↑] + c[n, :↓]'c[n, :↓], H) for n in (:L, :H, :R)]
     perts = [num_ops[1] + num_ops[3], num_ops[2]]
-    sol = find_sweet_spot(ham0, perts; HS=H, q=2, Epenalty=1e3, lb=Δ0 .* [-1.3, -1], ub=Δ0 .* [0, 0.0])
+    sol = find_sweet_spot(ham0, perts; HS=H, q, Epenalty=1e3, lb=Δ0 .* [-1.3, -1], ub=Δ0 .* [0, 0.0])
     ham = ham0 + sum(sol .* perts)
     vals, vecs = eigen!(Hermitian(Matrix(ham)))
-    reduced = Dict(m => reduced_majoranas_properties(vecs[:, 1], vecs[:, 2], H, subregion(m, H); q=2) for m in subregions)
+    reduced = Dict(m => reduced_majoranas_properties(vecs[:, 1], vecs[:, 2], H, subregion(m, H); q) for m in subregions)
     δQs = [charge_diff(vecs[:, 1], vecs[:, 2], num_ops[i]) for i in (1, 3)]
     Egap = vals[3] - vals[2]
     δE = vals[2] - vals[1]
@@ -107,47 +108,42 @@ Egaps = map(x -> x.Egap, sweet_spots)
 figsize = 150 .* (1.5, 1)
 fig = with_theme(theme_aps(linestyles=[nothing, :dash, :dot])) do
     fig = Figure(
-        size = figsize,
-        figure_padding = (20, 10, 10, 10),
+        size=figsize,
+        figure_padding=(20, 10, 10, 10),
     )
     ax = Axis(
         fig[1, 1];
-        xlabel = L"t/\Delta_H",
+        xlabel=L"t/\Delta_H",
     )
     colors = [Cycled(2), Cycled(4), Cycled(1)]
     ax.xgridvisible = false
     ax.ygridvisible = false
     lines!(ax, ts, [q.Qospin for q in qms];
-           label = L"Q_o",
-           color = colors[2])
+        label=L"Q_o",
+        color=colors[2])
     lines!(ax, ts, [q.Qespin for q in qms];
-           label = L"Q_e", linestyle = :dash,
-           color = colors[1])
+        label=L"Q_e", linestyle=:dash,
+        color=colors[1])
     lines!(ax, ts, [abs(x.δQs[1]) for x in sweet_spots];
-           label = L"\left|\partial_{\varepsilon_a} \delta E\right|",
-           linestyle = (:dot, :dense),
-           color = colors[3])
+        label=L"\left|\partial_{\varepsilon_a} \delta E\right|",
+        linestyle=(:dot, :dense),
+        color=colors[3])
     Legend(
         fig[1, 1], ax;
-        tellheight = false,
-        tellwidth = false,
-        margin = (10, 10, 10, 10),
-        rowgap = -2,
-        labelsize = 10,
-        halign = :left, valign = :top,
+        tellheight=false,
+        tellwidth=false,
+        margin=(10, 10, 10, 10),
+        rowgap=-2,
+        labelsize=10,
+        halign=:left, valign=:top,
     )
     text!(fig.scene, 0.01, 0.85; text=LaTeXString("(b)"), space=:relative, fontsize=10)
     fig
 end
+##
+save(plotsdir("ABS_to_YSR_sweet_spots_Qs.png"), fig, px_per_unit=2.5)
 
-save("../ABS_to_YSR_sweet_spots_Qs.pdf", fig)
-
-
-
-
-
-
-
+##
 axgap = Axis(f[1, 2]; xlabel=L"t/\Delta_0")
 g1 = lines!(axgap, ts, Egaps, label=L"E_g/\Delta_0");
 g2 = lines!(axgap, ts, map(x -> x.δE, sweet_spots), label=L"\delta E", linestyle=:dash);
@@ -173,7 +169,7 @@ f
 
 # save("../ABS_to_YSR_sweet_spots_Qs_optLDspin.png", f)
 
-### Detailed sweet-spot properties
+## Detailed sweet-spot properties
 ints = mapreduce(x -> [sqrt(2) * x.reduced[m].LD / (x.reduced[m].LFmin * x.reduced[m].LFmax) for m in outer_spins], hcat, sweet_spots)
 LDs = map(x -> [x.reduced[m].LD for m in outer_spins], sweet_spots)
 LFs = map(x -> [x.reduced[m].LFmin for m in outer_spins], sweet_spots)
@@ -197,7 +193,7 @@ axislegend(axμ; position=:lb)
 axints = Axis(f[2, 2]; xlabel=L"t/\Delta_0")
 series!(axints, ts, ints);
 f
-
+##
 gs = sweet_spots[1].vecs[:, 1]
 gs' * matrix_representation(c[:L, :↑]'c[:L, :↑], H) * gs
 gs' * matrix_representation(c[:L, :↓]'c[:L, :↓], H) * gs
@@ -219,21 +215,18 @@ lines!(ax, ts, LFmindn, label=L"\gamma_{L\downarrow}", linestyle=:dash, color=:r
 # lines!(ax, ts, MPdn, label=L"M_{L\downarrow}", linestyle=:dot, color=:red);
 axislegend(ax; position=:lt)
 f
+##
+save(plotsdir("ABS_to_YSR_sweet_spots_majorana_wavefunctions.png"), f; px_per_unit=2.5)
 
-save("../ABS_to_YSR_sweet_spots_majorana_wavefunctions.png", f)
-
-
-
-
-### charge-stability diagram around delft sweet spot
+## charge-stability diagram around delft sweet spot
 fig = Figure();
 ax = Axis(fig[1, 1]; xlabel=L"\delta\varepsilon_L/Δ_0", ylabel=L"\delta\varepsilon_R/Δ_0")
 dϵs = range(-7, 7, 100)
 num_ops = [matrix_representation(c[n, :↑]'c[n, :↑] + c[n, :↓]'c[n, :↓], H) for n in (:L, :H, :R)]
 perts = [num_ops[1], num_ops[3]]
 ss = sweet_spots[end]
-symham = symbolic_hamiltonian(; ss.params..., 
-                              μ=(; L=ss.params.μ.L + ss.dμ[1], H=ss.params.μ.H + ss.dμ[2], R=ss.params.μ.R + ss.dμ[1]))
+symham = symbolic_hamiltonian(; ss.params...,
+    μ=(; L=ss.params.μ.L + ss.dμ[1], H=ss.params.μ.H + ss.dμ[2], R=ss.params.μ.R + ss.dμ[1]))
 ham0 = matrix_representation(symham, H)
 Edata = Folds.map(Base.product(dϵs, dϵs)) do xs
     ham = ham0 + sum(xs .* perts)
@@ -245,10 +238,10 @@ heatmap!(ax, dϵs, dϵs, Edata'; colormap=:vik, colorrange=maximum(abs, Edata) .
 #=fig, ax, hm = heatmap(Edata'; colormap=:vik, colorrange=maximum(abs, Edata) .* (-1, 1) .* 0.1);=#
 #=Colorbar(fig[1, 2], hm)=#
 fig
+##
+save(plotsdir("charge_stability_delft_sweet_spot.png"), fig; px_per_unit=2.5)
 
-save("../charge_stability_delft_sweet_spot.png", fig)
-
-### check splitting under zeeman variations
+## check splitting under zeeman variations
 dEzs = range(-0.1, 0.1, 100)
 pert_norm = 0.0
 Edata = Folds.map(dEzs) do dEz
@@ -266,12 +259,8 @@ lines!(ax, dEzs, Edata, label=L"\delta E");
 lines!(ax, dEzs, qms[end].Qespin * sqrt(pert_norm) * collect(dEzs), label="bound");
 axislegend(ax; position=:lt)
 f
-
-save("../zeeman_perturbation_sweet_spot.png", f)
-
-
-
-
+##
+save(plotsdir("zeeman_perturbation_sweet_spot.png"), f; px_per_unit=2.5)
 
 ##
 symham = symbolic_hamiltonian(; params..., μ=(; L=params.EZ.L, H=0Δ0, R=params.EZ.R), t=1Δ0)
