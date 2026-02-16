@@ -63,7 +63,7 @@ qn = ParityConservation()
 spaces = hilbert_spaces(S, R, B, qn)
 @unpack HS, HB, HR, HSB, HRB = spaces
 ##
-params = energy_splitting_parameters(HS)
+params = degenerate_good_majorana_parameters(HS)
 # params = (; params..., μ=round.(params.μ; digits=4))
 symham = kitaev_hamiltonian(f, HS; params...)
 hS = matrix_representation(symham, HS)
@@ -113,21 +113,6 @@ npbounds_strong = [d.full.np_bound[1, 1] for d in energy_splitting_data_strong]
 pbounds_strong = [d.full.p_bound for d in energy_splitting_data_strong]
 npbounds_weak = [d.full.np_bound[1, 1] for d in energy_splitting_data_weak]
 pbounds_weak = [d.full.p_bound for d in energy_splitting_data_weak]
-# energy_splitting_fig = with_theme(theme_aps()) do
-#     fig = Figure(size=150 .* (1.5, 1), figure_padding=5)
-#     ax = Axis(fig[1, 1]; xlabel=L"\varepsilon_d/ λ", limits=(nothing, (0, 1.1 * pbounds_strong[1] / λstrong)))
-#     colors = [Cycled(2), Cycled(4), Cycled(1), Cycled(6)]
-#     lines!(ax, ϵs_strong ./ λstrong, pbounds_strong ./ λstrong, label=LaTeXString("Eq. (36)"); linestyle=(:dot, :dense), color=colors[1])
-#     lines!(ax, ϵs_strong ./ λstrong, npbounds_strong ./ λstrong, label=LaTeXString("Eq. (35)"); linestyle=:dash, color=colors[2])
-#     lines!(ax, ϵs_weak ./ λweak, npbounds_weak ./ λweak, label=LaTeXString("Eq. (35) weak"); linestyle=:dash, color=colors[2])
-#     lines!(ax, ϵs_weak ./ λweak, δEs_weak ./ λweak, label=L"|\delta E_\mathrm{weak}| / λ"; linestyle=nothing, color=colors[3])
-#     lines!(ax, ϵs_strong ./ λstrong, δEs_strong ./ λstrong, label=L"|\delta E_\mathrm{strong}| / λ"; linestyle=nothing, color=colors[4])
-#     text!(fig.scene, 0.03, 0.84; text=LaTeXString("\\frac{E}{λ}"), space=:relative, fontsize=10)
-#     # text!(ax, 0.2, 0.7; text=L"Q_o = %$(round(reduced.LFmin; digits =3))", space=:relative)
-#     # text!(ax, 0.2, 0.55; text=L"Q_e = %$(round(reduced.LD; digits =3))", space=:relative)
-#     axislegend(ax; position=(0.9, 0.75))
-#     fig
-# end
 ##
 energy_splitting_fig = with_theme(theme_aps()) do
     fig = Figure(size=140 .* (1.8, 1), figure_padding=3)

@@ -54,8 +54,7 @@ qn = ParityConservation()
 spaces = hilbert_spaces(S, R, B, qn)
 @unpack HS, HB, HR, HSB, HRB = spaces
 ##
-@time params = energy_splitting_parameters(HS)
-# params = (; params..., μ=round.(params.μ; digits=4))
+@time params = degenerate_good_majorana_parameters(HS)
 symham = kitaev_hamiltonian(f, HS; params...)
 hS = matrix_representation(symham, HS)
 vals, vecs = blockeigen(hS, HS)
