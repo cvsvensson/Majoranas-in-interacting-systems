@@ -28,7 +28,7 @@ gapratio = abs((vals[1] - vals[nSB+1]) / exc_gap)
 @assert gapratio < 1e-8 "Not degenerate: gapratio = $gapratio"
 q = Inf
 using LowRankMatrices
-δρ = LowRankMatrix(gs_even, gs_even) - LowRankMatrix(gs_odd, gs_odd)
+δρ = LowRankMatrix(gs_even, conj(gs_even)) - LowRankMatrix(gs_odd, conj(gs_odd))
 Qe = sqrt(sum(norm(svdvals(partial_trace(δρ, HS => subregion(k:k, HS))), q)^2 for k in S))
 Qeabs = sum(norm(svdvals(partial_trace(δρ, HS => subregion(k:k, HS))), q) for k in S)
 
