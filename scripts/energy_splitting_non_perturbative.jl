@@ -114,49 +114,66 @@ pbounds_strong = [d.full.p_bound for d in energy_splitting_data_strong]
 npbounds_weak = [d.full.np_bound[1, 1] for d in energy_splitting_data_weak]
 pbounds_weak = [d.full.p_bound for d in energy_splitting_data_weak]
 ##
-energy_splitting_fig = with_theme(theme_aps()) do
-    fig = Figure(size=140 .* (1.8, 1), figure_padding=3)
+my_theme = copy(theme_aps())
+# my_theme.Axis.yminorticksvisible = false
+# my_theme.Axis.xminorticksvisible = false
+energy_splitting_fig = with_theme(my_theme) do
+    # fig = Figure(size=140 .* (1.8, 1), figure_padding=3)
+    fig = Figure(size=280 .* Tuple(normalize([2.4, 1])), figure_padding=3)
+    grid = fig[1, 1] = GridLayout()
     titlesize = 12
+#    minorticks = (; xminorticksvisible=false, yminorticksvisible=false)
     # Weak coupling subplot
-    ax_weak = Axis(fig[1, 1];
+    ax_weak = Axis(grid[1, 1];
         xlabel=L"\varepsilon_d / λ",
         ylabel=L"E / λ",
-        limits=(nothing, (0, 1.1 * pbounds_weak[1] / λweak)),
+        limits=(nothing, (0, 1.15 * pbounds_weak[1] / λweak)),
         title=L"λ = t/100",
         titlesize)
     colors = [Cycled(2), Cycled(4), Cycled(1), Cycled(6)]
 
-    lines!(ax_weak, ϵs_weak ./ λweak, pbounds_weak ./ λweak,
-        label=LaTeXString("Eq.\\,(36)"); linestyle=(:dot, :dense), color=colors[1])
-    lines!(ax_weak, ϵs_weak ./ λweak, npbounds_weak ./ λweak,
-        label=LaTeXString("Eq.\\,(35)"); linestyle=:dash, color=colors[2])
-    lines!(ax_weak, ϵs_weak ./ λweak, δEs_weak ./ λweak,
+    simple = lines!(ax_weak, ϵs_weak ./ λweak, pbounds_weak ./ λweak,
+        label=LaTeXString("Simple bound"); linestyle=(:dot, :dense), color=colors[1])
+    detailed = lines!(ax_weak, ϵs_weak ./ λweak, npbounds_weak ./ λweak,
+        label=LaTeXString("Detailed bound"); linestyle=:dash, color=colors[2])
+    energy = lines!(ax_weak, ϵs_weak ./ λweak, δEs_weak ./ λweak,
         label=L"|\delta E| / λ"; linestyle=nothing, color=colors[3])
-
+        
     # text!(fig.scene, 0.03, 0.84; text=LaTeXString("\\frac{E}{λ}"),
     #     space=:relative, fontsize=10)
-    axislegend(ax_weak; position=(1.05, 0.75))
+    # axislegend(ax_weak; position=(1.05, 0.75))
 
     # Strong coupling subplot
-    ax_strong = Axis(fig[1, 2];
+    ax_strong = Axis(grid[1, 2];
         xlabel=L"\varepsilon_d / λ",
-        limits=(nothing, (0, 1.1 * pbounds_strong[1] / λstrong)),
+        limits=(nothing, (0, 1.15 * pbounds_strong[1] / λstrong)),
         title=L"λ = t/2", titlesize)
     hideydecorations!(ax_strong; ticks=false, minorticks=false)
 
     lines!(ax_strong, ϵs_strong ./ λstrong, pbounds_strong ./ λstrong,
-        label=LaTeXString("Eq. (36)"); linestyle=(:dot, :dense), color=colors[1])
+        label=LaTeXString("Detailed bound"); linestyle=(:dot, :dense), color=colors[1])
     lines!(ax_strong, ϵs_strong ./ λstrong, npbounds_strong ./ λstrong,
-        label=LaTeXString("Eq. (35)"); linestyle=:dash, color=colors[2])
+        label=LaTeXString("Simple bound"); linestyle=:dash, color=colors[2])
+    # lines!(ax_strong, ϵs_strong ./ λstrong, pbounds_strong ./ λstrong,
+    #     label=LaTeXString("Eq. (36)"); linestyle=(:dot, :dense), color=colors[1])
+    # lines!(ax_strong, ϵs_strong ./ λstrong, npbounds_strong ./ λstrong,
+    #     label=LaTeXString("Eq. (35)"); linestyle=:dash, color=colors[2])
     lines!(ax_strong, ϵs_strong ./ λstrong, δEs_strong ./ λstrong,
         label=L"|\delta E| / λ"; linestyle=nothing, color=colors[3])
+    # axislegend(ax_strong; position=(1.1, 0.85), labelhalign=:left)
 
+    Legend(grid[1, 3],
+        [[energy], [simple, detailed]],
+        [[L"|\delta E| / λ"], ["Simple", "Detailed"]],
+        ["", "Bounds"]; labelsize=10, titlegap=0, titlesize=10, titlefont=:regular, groupgap=5,
+        patchlabelgap=4)
+    colsize!(grid, 3, Relative(0.27))
     fig
 end
 
 ##
-save(plotsdir("energy_splitting_comparison_$N.pdf"), energy_splitting_fig)
-save(plotsdir("energy_splitting_comparison_$N.png"), energy_splitting_fig, px_per_unit=2.5)
+save(plotsdir("energy_splitting_comparison_legend_$N.pdf"), energy_splitting_fig)
+save(plotsdir("energy_splitting_comparison_legend_$N.png"), energy_splitting_fig, px_per_unit=2.5)
 
 ##
 reduced.LFmin

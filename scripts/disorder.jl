@@ -66,22 +66,22 @@ disorder_fig = with_theme(theme_aps()) do
     xs = σs / normalization
     ys = data.y / normalization
     Q = data.Q / normalization
-    fig = Figure(size=110 .* (2, 1), figure_padding=6)
-    ax = Axis(fig[1, 1], xlabel=L"\sigma/t", ylabel=L"E/t", xlabelpadding=1)
+    fig = Figure(size=280 .* Tuple(normalize([2.6, 1])), figure_padding=(2, 7, 2, 4))
+    ax = Axis(fig[1, 1], xlabel=L"\sigma/t", ylabel=L"E/t", xlabelpadding=0)
     ylims!(ax, 0, 1.1 * maximum(ys))
     xlims!(ax, 0, maximum(xs))
     # lines!(ax, xs, ys; label=L"\overline{|\delta E|}", color=Cycled(1), linewidth=3)
-    lines!(ax, xs, ys; label=data.label, color=Cycled(1), linewidth=1.5)
-    lines!(ax, σs, σs * Q * data.prefactor / normalization, label="Eq. (38)"; linestyle=:dash, color=Cycled(4), linewidth=1.5)
+    lines!(ax, σs, σs * Q * data.prefactor / normalization, label="First-order bound"; linestyle=:dash, color=Cycled(4))
+    lines!(ax, xs, ys; label=data.label, color=Cycled(1))
     # axislegend(ax, position=(:left, :top), labelsize=8)
     Legend(
         fig[1, 1], ax;
-        tellheight = false,
-        tellwidth = false,
-        margin = (10, 10, 10, 10),
-        rowgap = -4,
-        labelsize = 8,
-        halign = :left, valign = :top,
+        tellheight=false,
+        tellwidth=false,
+        margin=(10, 10, 10, 2),
+        rowgap=-4,
+        labelsize=10,
+        halign=:left, valign=:top,
     )
     fig
 end
