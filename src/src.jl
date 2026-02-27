@@ -19,12 +19,12 @@ function effective_operators((γmin, γmax), hS, hSB, spaces)
     γSBmin = embed(γmin, HS => HSB; complement=HB)
     γSBmax = embed(γmax, HS => HSB; complement=HB)
     δρ = 1im * γSBmax * γSBmin
-    Fmin = partial_trace(γSBmin * hSB, HSB => HB)
-    Fmax = partial_trace(γSBmax * hSB, HSB => HB)
-    G = partial_trace(δρ * hSB, HSB => HB) |> Hermitian
+    Fmin = partial_trace(γSBmin * hSB, HSB => HB; complement = HS)
+    Fmax = partial_trace(γSBmax * hSB, HSB => HB; complement = HS)
+    G = partial_trace(δρ * hSB, HSB => HB; complement = HS) |> Hermitian
     ε = real(tr(1im * γmax * γmin * hS))
     P = γSBmin^2
-    B = partial_trace(P * hSB, HSB => HB)
+    B = partial_trace(P * hSB, HSB => HB; complement = HS)
     return (; Fmin, Fmax, G, ε, B)
 end
 
@@ -32,7 +32,7 @@ function effective_hamiltonian_parts((γmin, γmax), effective_operators, HS, HS
     @unpack Fmin, Fmax, G, ε, B = effective_operators
     tp = tensor_product((HS, HB) => HSB)
     PS = γmin^2
-    hgsB = (tp(γmin, Fmin) + tp(γmax, Fmax) + tp(1im * γmax * γmin, G) + tp(PS, B)) / 2
+    hgsB = (tp(γmin, Fmin) .+ tp(γmax, Fmax) .+ tp(1im * γmax * γmin, G) .+ tp(PS, B)) ./ 2
     hgs = ε * 1im * γmax * γmin / 2
     return hgs, hgsB
 end
@@ -95,10 +95,10 @@ function effective_hamiltonian(hamiltonians, spaces, (γmin, γmax); check_canon
     γmaxgs = matrix_representation(1im * f[0] + hc, Hgs)
     heffgs, heffgsB = effective_hamiltonian_parts((γmings, γmaxgs), effops, Hgs, HgsB, HB)
     heffS, heffSB = effective_hamiltonian_parts((γmin, γmax), effops, HS, HSB, HB)
-    hs_from_tos = [(heffgs, Hgs => HgsB),
-        (heffgsB, HgsB => HgsB),
-        (hB, HB => HgsB)]
-    total_ham = sum(embed(h, from_to) for (h, from_to) in hs_from_tos)
+    hs_from_tos_comp = [(heffgs, Hgs => HgsB, HB),
+        (heffgsB, HgsB => HgsB, hilbert_space([])),
+        (hB, HB => HgsB, Hgs)]
+    total_ham = sum(embed(h, from_to; complement) for (h, from_to, complement) in hs_from_tos_comp)
     return (; total_ham, heffS, heffSB, heffgs, heffgsB, effops, γgs=(γmings, γmaxgs))
 end
 
