@@ -24,7 +24,7 @@ function calculate_bounds(reduced, hamiltonians, spaces, q)
         @warn "ε > 1e-6" (heff.effops.ε)
     end
     odd_coupling, even_coupling = decompose_coupling(hRB, HRB, HR, HB)
-    vals_full, vecs_full = blockeigen(Hermitian(embed(hS0, HS => HSB) + embed(hRB, HRB => HSB) + embed(hB, HB => HSB)), HSB)
+    vals_full, vecs_full = blockeigen(Hermitian(embed(hS0, HS => HSB; complement=HB) + embed(hRB, HRB => HSB) + embed(hB, HB => HSB; complement=HS)), HSB)
     vals, vecs = blockeigen(Hermitian(heff.total_ham), spaces.HgsB)
     γeff = [embed(γ, spaces.Hgs => spaces.HgsB) for γ in heff.γgs]
     γfull = [embed(γ, spaces.HS => spaces.HSB) for γ in (reduced.γmin, reduced.γmax)]
@@ -53,7 +53,7 @@ end
 
 ##
 @fermions f
-N = 8
+N = 14
 S = 1:N
 B = length(S) .+ (1:1)
 R = last(S):last(S)
@@ -87,7 +87,7 @@ hRBsym = tc * f[r]' * f[b] + Δc * f[r] * f[b] + hc +
          Uc * f[b]' * f[b] * f[r]' * f[r]
 hRB = matrix_representation(hRBsym, spaces.HRB)
 ϵs_strong = 2 * λstrong * range(-1, 1, 100)
-@time energy_splitting_data_strong = Folds.map(ϵs_strong) do ϵ
+@profview @time energy_splitting_data_strong = Folds.map(ϵs_strong) do ϵ
     hB = matrix_representation(ϵ * f[only(B)]' * f[only(B)], spaces.HB)
     hamiltonians = (; hS0=hS, hS=hS, hB=hB, hRB=hRB)
     calculate_bounds(reduced, hamiltonians, spaces, q)
@@ -122,7 +122,7 @@ energy_splitting_fig = with_theme(my_theme) do
     fig = Figure(size=280 .* Tuple(normalize([2.4, 1])), figure_padding=3)
     grid = fig[1, 1] = GridLayout()
     titlesize = 12
-#    minorticks = (; xminorticksvisible=false, yminorticksvisible=false)
+    #    minorticks = (; xminorticksvisible=false, yminorticksvisible=false)
     # Weak coupling subplot
     ax_weak = Axis(grid[1, 1];
         xlabel=L"\varepsilon_d / λ",
@@ -138,7 +138,7 @@ energy_splitting_fig = with_theme(my_theme) do
         label=LaTeXString("Detailed bound"); linestyle=:dash, color=colors[2])
     energy = lines!(ax_weak, ϵs_weak ./ λweak, δEs_weak ./ λweak,
         label=L"|\delta E| / λ"; linestyle=nothing, color=colors[3])
-        
+
     # text!(fig.scene, 0.03, 0.84; text=LaTeXString("\\frac{E}{λ}"),
     #     space=:relative, fontsize=10)
     # axislegend(ax_weak; position=(1.05, 0.75))
