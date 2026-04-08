@@ -59,8 +59,6 @@ function find_sweet_spot(ham0, perts; HS, q, Epenalty=1e6, optkwargs...)
         NL = matrix_representation(c[:L, :↑]'c[:L, :↑] + c[:L, :↓]'c[:L, :↓], HS)
         δQL = charge_diff(vecs[:, 1], vecs[:, n2], NL)
         δQL^2 + Ediff * Epenalty
-        # reduceds = [reduced_majoranas_properties(vecs[:, 1], vecs[:, n2], HS, HR; q) for HR in HRs]
-        # sum(x -> x.LD^2, reduceds) + Ediff * Epenalty
     end
     x0 = -[0.1Δ0, 0.5Δ0]
     prob = OptimizationProblem(cost_function, x0, nothing; optkwargs...)# lb=[-1.0, -1.0], ub=[1.0, 1.0])

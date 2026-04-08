@@ -65,16 +65,10 @@ pbounds_strong = [d.full.p_bounds.p_bound for d in energy_splitting_data_strong]
 npbounds_weak = [d.full.np_bounds.np_bound[1, 1] for d in energy_splitting_data_weak]
 pbounds_weak = [d.full.p_bounds.p_bound for d in energy_splitting_data_weak]
 ##
-my_theme = copy(theme_aps())
-# my_theme.Axis.yminorticksvisible = false
-# my_theme.Axis.xminorticksvisible = false
-energy_splitting_fig = with_theme(my_theme) do
-    # fig = Figure(size=140 .* (1.8, 1), figure_padding=3)
+energy_splitting_fig = with_theme(theme_aps()) do
     fig = Figure(size=280 .* Tuple(normalize([2.4, 1])), figure_padding=3)
     grid = fig[1, 1] = GridLayout()
     titlesize = 12
-    #    minorticks = (; xminorticksvisible=false, yminorticksvisible=false)
-    # Weak coupling subplot
     ax_weak = Axis(grid[1, 1];
         xlabel=L"\varepsilon_d / λ",
         ylabel=L"E / λ",
@@ -90,10 +84,6 @@ energy_splitting_fig = with_theme(my_theme) do
     energy = lines!(ax_weak, ϵs_weak ./ λweak, δEs_weak ./ λweak,
         label=L"|\delta E| / λ"; linestyle=nothing, color=colors[3])
 
-    # text!(fig.scene, 0.03, 0.84; text=LaTeXString("\\frac{E}{λ}"),
-    #     space=:relative, fontsize=10)
-    # axislegend(ax_weak; position=(1.05, 0.75))
-
     # Strong coupling subplot
     ax_strong = Axis(grid[1, 2];
         xlabel=L"\varepsilon_d / λ",
@@ -105,13 +95,8 @@ energy_splitting_fig = with_theme(my_theme) do
         label=LaTeXString("Detailed bound"); linestyle=(:dot, :dense), color=colors[1])
     lines!(ax_strong, ϵs_strong ./ λstrong, npbounds_strong ./ λstrong,
         label=LaTeXString("Simple bound"); linestyle=:dash, color=colors[2])
-    # lines!(ax_strong, ϵs_strong ./ λstrong, pbounds_strong ./ λstrong,
-    #     label=LaTeXString("Eq. (36)"); linestyle=(:dot, :dense), color=colors[1])
-    # lines!(ax_strong, ϵs_strong ./ λstrong, npbounds_strong ./ λstrong,
-    #     label=LaTeXString("Eq. (35)"); linestyle=:dash, color=colors[2])
     lines!(ax_strong, ϵs_strong ./ λstrong, δEs_strong ./ λstrong,
         label=L"|\delta E| / λ"; linestyle=nothing, color=colors[3])
-    # axislegend(ax_strong; position=(1.1, 0.85), labelhalign=:left)
 
     Legend(grid[1, 3],
         [[energy], [simple, detailed]],

@@ -68,10 +68,8 @@ disorder_fig = with_theme(theme_aps()) do
     ax = Axis(fig[1, 1], xlabel=L"\sigma/t", ylabel=L"E/t", xlabelpadding=0)
     ylims!(ax, 0, 1.1 * maximum(ys))
     xlims!(ax, 0, maximum(xs))
-    # lines!(ax, xs, ys; label=L"\overline{|\delta E|}", color=Cycled(1), linewidth=3)
     lines!(ax, σs, σs * Q * data.prefactor / normalization, label="First-order bound"; linestyle=:dash, color=Cycled(4))
     lines!(ax, xs, ys; label=data.label, color=Cycled(1))
-    # axislegend(ax, position=(:left, :top), labelsize=8)
     Legend(
         fig[1, 1], ax;
         tellheight=false,
