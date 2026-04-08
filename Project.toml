@@ -26,7 +26,7 @@ UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 [compat]
 ArnoldiMethod = "0.4"
 BlockDiagonals = "0.2"
-FermionicHilbertSpaces = "0.9"
+FermionicHilbertSpaces = "0.9.3"
 LowRankMatrices = "1.0.2"
 Optimization = "5.3.0"
 OptimizationBBO = "0.4.5"

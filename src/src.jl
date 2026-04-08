@@ -55,11 +55,6 @@ end
 function iscanonical(hamiltonians, spaces)
     @unpack hS, hS0, hB, hRB = hamiltonians
     @unpack HS, HB, HR, HRB, HSB = spaces
-    hRBinB_norm = norm(partial_trace(hRB, HRB => HB))
-    if hRBinB_norm > 1e-8
-        println("hRB in B norm: $hRBinB_norm")
-        return false
-    end
     partial_trace(hS, HS => HR) ≈ partial_trace(hS0, HS => HR) || (println(norm(partial_trace(hS - hS0, HS => HR))); return false) # The part of HS in R is zero. That part is included in HRB
     return true
 end
@@ -271,4 +266,58 @@ function optimized_μ(H; μ, t, Δ, U, tol)
     deg_fun = degeneracy_fun_μ(c, H; μ, t, Δ, U, tol)
     prob = ZeroProblem(deg_fun, zero(μ))
     solve(prob; rtol=tol)
+end
+
+
+function calculate_bounds(hamiltonians, spaces, q)
+    @unpack HS = spaces
+    canon_hams = canonicalize_hamiltonians(hamiltonians, spaces)
+    @unpack hS0, hS, hB, hRB = canon_hams
+    _, vecs = ground_states_arnoldi(hS0, HS)
+    gs_odd = vcat(vecs[1], zero(vecs[2]))
+    gs_even = vcat(zero(vecs[1]), vecs[2])
+
+    reduced = reduced_majoranas_properties(gs_even, gs_odd, HS, HR, FrobeniusGauge(); q)
+    return calculate_bounds(reduced, hamiltonians, spaces, q)
+end
+
+function calculate_bounds(reduced, hamiltonians, spaces, q)
+    @unpack HS, HB, HR, HSB, HRB = spaces
+    p = conjugate_norm(q)
+    canon_hams = canonicalize_hamiltonians(hamiltonians, spaces)
+    @unpack hS0, hS, hB, hRB = canon_hams
+    heff = effective_hamiltonian(canon_hams, spaces, (reduced.γmin, reduced.γmax))
+    if abs(heff.effops.ε) > 1e-6
+        @warn "ε > 1e-6" (heff.effops.ε)
+    end
+    odd_coupling, even_coupling = decompose_coupling(hRB, HRB, HR, HB)
+    vals_full, vecs_full = blockeigen(Hermitian(embed(hS0, HS => HSB; complement=HB) + embed(hRB, HRB => HSB) + embed(hB, HB => HSB; complement=HS)), HSB)
+    vals, vecs = blockeigen(Hermitian(heff.total_ham), spaces.HgsB)
+    γeff = [embed(γ, spaces.Hgs => spaces.HgsB) for γ in heff.γgs]
+    γfull = [embed(γ, spaces.HS => spaces.HSB) for γ in (reduced.γmin, reduced.γmax)]
+    eff = calculate_bounds(reduced, vals, vecs, odd_coupling, even_coupling, γeff, spaces.Hgs, spaces.HB, spaces.HgsB, q, p)
+    full = calculate_bounds(reduced, vals_full, vecs_full, odd_coupling, even_coupling, γfull, spaces.HS, spaces.HB, spaces.HSB, q, p)
+    (; heff, eff, full)
+end
+
+function calculate_bounds(reduced, vals, vecs, odd_coupling, even_coupling, (γmin, γmax), HS, HB, HSB, q, p; dn=4)
+    n = div(size(vecs, 2), 2) # number of odd/even states
+    dn = min(dn, n)
+    even_norm = schatten_norm(even_coupling, p)
+    odd_norm = schatten_norm(odd_coupling, p)
+    odd_states, even_states = map(states -> states[:, 1:dn], vecs.blocks)
+    overlaps1 = abs.(odd_states' * γmin[1:n, n+1:2n] * even_states)
+    OEs = [E * O' for (O, E) in Base.product(eachcol(vecs[:, 1:dn]), eachcol(vecs[:, n+1:n+dn]))]
+    OEBnorms = [schatten_norm(partial_trace(OE, HSB => HB), q) for OE in OEs]
+    pairs = map(CartesianIndex, enumerate(map(v -> argmax(v), eachrow(overlaps1))))
+    δEs = map(es -> -(es...), Base.product(vals[1:dn], vals[n+1:n+dn]))
+    np_bound = (reduced.LD * even_norm .+ reduced.LFmin * odd_norm * OEBnorms) ./ overlaps1
+    np_bound_even = (reduced.LD * even_norm) ./ overlaps1
+    np_bound_odd = (reduced.LFmin * odd_norm * OEBnorms) ./ overlaps1
+    np_bounds = (; np_bound, np_bound_even, np_bound_odd)
+    p_bound = sqrt(dim(HB)) * (reduced.LD * even_norm + reduced.LFmin * odd_norm)
+    p_bound_LD = sqrt(dim(HB)) * (reduced.LD * even_norm)
+    p_bound_LF = sqrt(dim(HB)) * (reduced.LFmin * odd_norm)
+    p_bounds = (; p_bound, p_bound_LD, p_bound_LF)
+    (; δEs, p_bounds, np_bounds, even_norm, odd_norm, vals, vecs, pairs, overlaps1, OEBnorms)
 end

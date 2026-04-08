@@ -1,9 +1,8 @@
 using DrWatson
 @quickactivate :ManybodyMajoranas
-using LinearAlgebra, Folds
+using LinearAlgebra, Folds, LowRankMatrices
 using UnPack, CairoMakie, MakiePublication, LaTeXStrings
 using Random: seed!
-
 ##
 @fermions f
 N = 8
@@ -27,7 +26,6 @@ exc_gap = minimum([abs(vals[2] - vals[1]), abs(vals[nSB+2] - vals[nSB+1])]) # ex
 gapratio = abs((vals[1] - vals[nSB+1]) / exc_gap)
 @assert gapratio < 1e-8 "Not degenerate: gapratio = $gapratio"
 q = Inf
-using LowRankMatrices
 δρ = LowRankMatrix(gs_even, conj(gs_even)) - LowRankMatrix(gs_odd, conj(gs_odd))
 Qe = sqrt(sum(norm(svdvals(partial_trace(δρ, HS => subregion(k:k, HS))), q)^2 for k in S))
 Qeabs = sum(norm(svdvals(partial_trace(δρ, HS => subregion(k:k, HS))), q) for k in S)
@@ -88,4 +86,4 @@ end
 
 ##
 save(plotsdir("disorder_$N.pdf"), disorder_fig)
-save(plotsdir("disorder_$N.png"), disorder_fig, px_per_unit=2.5)
+save(plotsdir("disorder_$N.png"), disorder_fig, px_per_unit=1.4)
