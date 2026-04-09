@@ -42,15 +42,13 @@
     "related_identifiers": [
         {
             "identifier": "https://github.com/cvsvensson/Majoranas-in-interacting-systems/tree/v2.0.0",
-            "relation": "isIdenticalTo",
+            "relation": "isSupplementTo",
             "resource_type": "software",
             "scheme": "url"
         }
     ],
     "version": "v2.0.0",
-    "license": {
-        "id": "MIT"
-    },
+    "license": "MIT",
     "grants": [
         {
             "id": "10.13039/501100000780::856526"
