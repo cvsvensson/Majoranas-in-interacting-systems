@@ -1,0 +1,121 @@
+{
+    "title": "Quantifying robustness and locality of Majorana bound states in interacting systems",
+    "doi": "10.5281/zenodo.17422941",
+    "publication_date": "2025-10-23",
+    "description": "<p>Contains code, data and figures for the article \"Quantifying robustness and locality of Majorana bound states in interacting systems\".</p>",
+    "access_right": "open",
+    "creators": [
+        {
+            "name": "Samuelson, William",
+            "affiliation": "Lund University",
+            "orcid": "0009-0005-3736-0979"
+        },
+        {
+            "name": "Torres Luna, Juan Daniel",
+            "affiliation": "Delft University of Technology",
+            "orcid": "0009-0001-6542-6518"
+        },
+        {
+            "name": "Miles, Sebastian",
+            "affiliation": "Delft University of Technology",
+            "orcid": "0009-0005-6425-8072"
+        },
+        {
+            "name": "Bozkurt, A. Mert",
+            "affiliation": "Delft University of Technology",
+            "orcid": "0000-0003-0593-6062"
+        },
+        {
+            "name": "Leijnse, Martin",
+            "affiliation": "Lund University",
+            "orcid": "0000-0003-3639-8594"
+        },
+        {
+            "name": "Wimmer, Michael",
+            "affiliation": "Delft University of Technology",
+            "orcid": "0000-0001-6654-2310"
+        },
+        {
+            "name": "Svensson, Viktor",
+            "affiliation": "University of Oslo",
+            "orcid": "0000-0002-5116-1707"
+        }
+    ],
+    "related_identifiers": [
+        {
+            "identifier": "https://github.com/cvsvensson/Majoranas-in-interacting-systems/tree/v1.0.0",
+            "relation": "isIdenticalTo",
+            "resource_type": "software",
+            "scheme": "url"
+        }
+    ],
+    "version": "v2.0.0",
+    "custom": {
+        "code:codeRepository": "https://github.com/cvsvensson/Majoranas-in-interacting-systems",
+        "code:programmingLanguage": [
+            {
+                "id": "julia",
+                "title": {
+                    "en": "Julia"
+                }
+            }
+        ]
+    },
+    "resource_type": {
+        "title": "Software",
+        "type": "software"
+    },
+    "license": {
+        "id": "mit-license"
+    },
+    "grants": [
+        {
+            "code": "856526",
+            "internal_id": "10.13039/501100000780::856526",
+            "funder": {
+                "name": "European Commission",
+                "doi": "10.13039/501100000780",
+                "acronym": "EC"
+            },
+            "title": "Foundations of nonlocal and nonabelian condensed-matter systems",
+            "acronym": "NONLOCAL",
+            "program": "H2020-EU.1.1.",
+            "url": "https://cordis.europa.eu/projects/856526"
+        },
+        {
+            "code": "101126636",
+            "internal_id": "10.13039/501100000780::101126636",
+            "funder": {
+                "name": "European Commission",
+                "doi": "10.13039/501100000780",
+                "acronym": "EC"
+            },
+            "title": "DSTrain - Data Science Postdoctoral Training Programme",
+            "acronym": "DSTrain",
+            "program": "HORIZON.1.2",
+            "url": "https://cordis.europa.eu/projects/101126636"
+        },
+        {
+            "code": "101115315",
+            "internal_id": "10.13039/501100000780::101115315",
+            "funder": {
+                "name": "European Commission",
+                "doi": "10.13039/501100000780",
+                "acronym": "EC"
+            },
+            "title": "Quantum bits with Kitaev Transmons",
+            "acronym": "QuKiT",
+            "program": "HORIZON.3.1",
+            "url": "https://cordis.europa.eu/projects/101115315"
+        },
+        {
+            "code": "OCENW.GROOT.2019.004",
+            "internal_id": "10.13039/501100003246::OCENW.GROOT.2019.004",
+            "funder": {
+                "name": "Dutch Research Council",
+                "doi": "10.13039/501100003246",
+                "acronym": "NWO"
+            }
+        }
+    ]
+}
