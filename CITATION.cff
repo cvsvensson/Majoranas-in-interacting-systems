@@ -1,0 +1,42 @@
+# YAML 1.2
+# Metadata for citation of this software according to the CFF format (https://citation-file-format.github.io/)
+cff-version: 1.0.3
+message: If you use this software, please cite it using these metadata.
+
+title: Quantifying robustness and locality of Majorana bound states in 
+  interacting systems
+doi: 10.5281/zenodo.17422940
+
+authors:
+- given-names: William
+  family-names: Samuelson
+  affiliation: Lund University
+  orcid: https://orcid.org/0009-0005-3736-0979
+- given-names: Juan Daniel
+  family-names: Torres Luna
+  affiliation: Delft University of Technology
+  orcid: https://orcid.org/0009-0001-6542-6518
+- given-names: Sebastian
+  family-names: Miles
+  affiliation: Delft University of Technology
+  orcid: https://orcid.org/0009-0005-6425-8072
+- given-names: A. Mert
+  family-names: Bozkurt
+  affiliation: Delft University of Technology
+  orcid: https://orcid.org/0000-0003-0593-6062
+- given-names: Martin
+  family-names: Leijnse
+  affiliation: Lund University
+  orcid: https://orcid.org/0000-0003-3639-8594
+- given-names: Michael
+  family-names: Wimmer
+  affiliation: Delft University of Technology
+  orcid: https://orcid.org/0000-0001-6654-2310
+- given-names: Viktor
+  family-names: Svensson
+  affiliation: University of Oslo
+  orcid: https://orcid.org/0000-0002-5116-1707
+version: 2.0.0
+date-released: 2025-10-23
+repository-code: https://github.com/cvsvensson/Majoranas-in-interacting-systems
+license: mit-license
