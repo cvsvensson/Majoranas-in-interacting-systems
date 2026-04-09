@@ -1,3 +1,4 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17422941.svg)](https://doi.org/10.5281/zenodo.17422941)
 # Quantifying robustness and locality of Majorana bound states in interacting systems
 This repository contains the code used to generate the data and the figures used in the paper
 > **[Quantifying robustness and locality of Majorana bound states in interacting systems](https://arxiv.org/abs/2510.20538)** \
