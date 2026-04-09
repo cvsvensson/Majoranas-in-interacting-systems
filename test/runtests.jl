@@ -56,7 +56,7 @@ using Random: seed!
     gs_even = vecs[:, n+1]
     odd_eigenstates, even_eigenstates = vecs.blocks
     overlaps1 = odd_eigenstates' * γgsBmin[1:n, n+1:2n] * even_eigenstates
-    overlaps2 = odd_eigenstates' * 1im * γgsBmax[1:n, n+1:2n] * even_eigenstates 
+    overlaps2 = odd_eigenstates' * 1im * γgsBmax[1:n, n+1:2n] * even_eigenstates
     δEs = map(es -> -(es...), Base.product(vals[1:n], vals[n+1:2n]))
     ε = heff.effops.ε
 
@@ -83,8 +83,8 @@ end
 
     @fermions f
     hS0 = random_hamiltonian(HS)
-    hB0 = 0 * random_hamiltonian(HB)
-    hRB0 = 0 * random_hamiltonian(HRB)
+    hB0 = random_hamiltonian(HB)
+    hRB0 = random_hamiltonian(HRB)
 
     hams = (; hS0=hS0, hS=hS0, hB=hB0, hRB=hRB0)
     canon_hams = canonicalize_hamiltonians(hams, spaces)
@@ -96,19 +96,53 @@ end
     vals, vecs = blockeigen(hS, HS)
     gs_odd = vecs[:, 1]
     gs_even = vecs[:, div(size(vecs, 2), 2)+1]
+    PSgs = gs_odd * gs_odd' + gs_even * gs_even'
     reduced = reduced_majoranas_properties(gs_even, gs_odd, HS, HR; q)
     (γSmin, γSmax) = γS = reduced[[:γmin, :γmax]]
+    @test PSgs * γSmin ≈ γSmin
+    @test PSgs * γSmax ≈ γSmax
+    @test ManybodyMajoranas.LowRankMatrix(gs_odd, conj(gs_even)) ≈ gs_odd * gs_even'
+
     heff = effective_hamiltonian(canon_hams, spaces, γS)
     ε = heff.effops.ε
 
     γSBmin, γSBmax = map(γ -> embed(γ, HS => HSB), γS)
-    P = embed(γSmin^2, HS => HSB)
+    PS = γSmin^2
+    @test PSgs ≈ PS
+    P = embed(PS, HS => HSB)
     @test P^2 ≈ P
-    G = embed(heff.effops.G, HB => HSB)
-    Fmin = embed(heff.effops.Fmin, HB => HSB)
-    Fmax = embed(heff.effops.Fmax, HB => HSB)
-    h = ((ε * I + G) * 1im * γSBmin * γSBmax + γSBmin * Fmin + γSBmax * Fmax) / 2 + embed(hB, HB => HSB)
-    @test P * h * P ≈ h
-    h2 = embed(hS, HS => HSB) + embed(hRB, HRB => HSB) + embed(hB, HB => HSB)
+    @test P * γSBmin ≈ γSBmin
+    @test P * γSBmax ≈ γSBmax
+    G = tensor_product((PS, heff.effops.G), (HS, HB) => HSB)
+    @test P * G * P ≈ G
+    Fmin = tensor_product((PS, heff.effops.Fmin), (HS, HB) => HSB)
+    Fmax = tensor_product((PS, heff.effops.Fmax), (HS, HB) => HSB)
+    B = tensor_product((PS, heff.effops.B), (HS, HB) => HSB)
+
+    heff_SB = (G * 1im * γSBmax * γSBmin + γSBmin * Fmin + γSBmax * Fmax + B) / 2
+    hSB = embed(hRB, HRB => HSB)
+    phSB = P * embed(hRB, HRB => HSB) * P
+
+    @test partial_trace(heff_SB * γSBmin, HSB => HB) ≈ partial_trace(hSB * γSBmin, HSB => HB)
+    @test partial_trace(heff_SB * γSBmax, HSB => HB) ≈ partial_trace(hSB * γSBmax, HSB => HB)
+    @test partial_trace(heff_SB * 1im * γSBmax * γSBmin, HSB => HB) ≈ partial_trace(hSB * 1im * γSBmax * γSBmin, HSB => HB)
+    @test partial_trace(heff_SB * γSBmin, HSB => HB) ≈ partial_trace(phSB * γSBmin, HSB => HB)
+    @test partial_trace(heff_SB * γSBmax, HSB => HB) ≈ partial_trace(phSB * γSBmax, HSB => HB)
+    @test partial_trace(heff_SB * 1im * γSBmax * γSBmin, HSB => HB) ≈ partial_trace(phSB * 1im * γSBmax * γSBmin, HSB => HB)
+    # @test partial_trace(heff_SB, HSB => HB) - partial_trace(hSB, HSB => HB) |> norm
+    @test partial_trace(heff_SB, HSB => HB) ≈ partial_trace(phSB, HSB => HB)
+
+    heff_S = ε * 1im * γSBmax * γSBmin / 2 + P * tr(PS * hS) / tr(PS)  #P * embed(hS, HS => HSB)
+    @test partial_trace(heff_S * 1im * γSBmax * γSBmin, HSB => HB) ≈ partial_trace(P * embed(hS, HS => HSB) * P * 1im * γSBmax * γSBmin, HSB => HB)
+    @test partial_trace(heff_S, HSB => HB) ≈ partial_trace(P * embed(hS, HS => HSB) * P, HSB => HB)
+    @test P * embed(hS, HS => HSB) * P ≈ heff_S
+
+    heff_B = tensor_product((PS, hB), (HS, HB) => HSB)
+    @test P * embed(hB, HB => HSB) * P ≈ heff_B
+
+    heff_full = heff_S + heff_B + heff_SB
+    @test P * heff_full * P ≈ heff_full
+    @test P * h * P ≈ heff_full
 end
+
 

@@ -11,7 +11,7 @@ function good_majoranas_parameters(HS)
     (; U, Δ, μ, t, δμ)
 end
 
-function energy_splitting_parameters(HS;)
+function degenerate_good_majorana_parameters(HS;)
     N = length(keys(HS))
     t = global_parameters.t
     U = 2t

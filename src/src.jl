@@ -19,17 +19,20 @@ function effective_operators((γmin, γmax), hS, hSB, spaces)
     γSBmin = embed(γmin, HS => HSB; complement=HB)
     γSBmax = embed(γmax, HS => HSB; complement=HB)
     δρ = 1im * γSBmax * γSBmin
-    Fmin = partial_trace(γSBmin * hSB, HSB => HB)
-    Fmax = partial_trace(γSBmax * hSB, HSB => HB)
-    G = partial_trace(δρ * hSB, HSB => HB) |> Hermitian
+    Fmin = partial_trace(γSBmin * hSB, HSB => HB; complement = HS)
+    Fmax = partial_trace(γSBmax * hSB, HSB => HB; complement = HS)
+    G = partial_trace(δρ * hSB, HSB => HB; complement = HS) |> Hermitian
     ε = real(tr(1im * γmax * γmin * hS))
-    return (; Fmin, Fmax, G, ε)
+    P = γSBmin^2
+    B = partial_trace(P * hSB, HSB => HB; complement = HS)
+    return (; Fmin, Fmax, G, ε, B)
 end
 
 function effective_hamiltonian_parts((γmin, γmax), effective_operators, HS, HSB, HB)
-    @unpack Fmin, Fmax, G, ε = effective_operators
+    @unpack Fmin, Fmax, G, ε, B = effective_operators
     tp = tensor_product((HS, HB) => HSB)
-    hgsB = (tp(γmin, Fmin) + tp(γmax, Fmax) + tp(1im * γmax * γmin, G)) / 2
+    PS = γmin^2
+    hgsB = (tp(γmin, Fmin) .+ tp(γmax, Fmax) .+ tp(1im * γmax * γmin, G) .+ tp(PS, B)) ./ 2
     hgs = ε * 1im * γmax * γmin / 2
     return hgs, hgsB
 end
@@ -52,11 +55,6 @@ end
 function iscanonical(hamiltonians, spaces)
     @unpack hS, hS0, hB, hRB = hamiltonians
     @unpack HS, HB, HR, HRB, HSB = spaces
-    hRBinB_norm = norm(partial_trace(hRB, HRB => HB))
-    if hRBinB_norm > 1e-8
-        println("hRB in B norm: $hRBinB_norm")
-        return false
-    end
     partial_trace(hS, HS => HR) ≈ partial_trace(hS0, HS => HR) || (println(norm(partial_trace(hS - hS0, HS => HR))); return false) # The part of HS in R is zero. That part is included in HRB
     return true
 end
@@ -92,10 +90,10 @@ function effective_hamiltonian(hamiltonians, spaces, (γmin, γmax); check_canon
     γmaxgs = matrix_representation(1im * f[0] + hc, Hgs)
     heffgs, heffgsB = effective_hamiltonian_parts((γmings, γmaxgs), effops, Hgs, HgsB, HB)
     heffS, heffSB = effective_hamiltonian_parts((γmin, γmax), effops, HS, HSB, HB)
-    hs_from_tos = [(heffgs, Hgs => HgsB),
-        (heffgsB, HgsB => HgsB),
-        (hB, HB => HgsB)]
-    total_ham = sum(embed(h, from_to) for (h, from_to) in hs_from_tos)
+    hs_from_tos_comp = [(heffgs, Hgs => HgsB, HB),
+        (heffgsB, HgsB => HgsB, hilbert_space([])),
+        (hB, HB => HgsB, Hgs)]
+    total_ham = sum(embed(h, from_to; complement) for (h, from_to, complement) in hs_from_tos_comp)
     return (; total_ham, heffS, heffSB, heffgs, heffgsB, effops, γgs=(γmings, γmaxgs))
 end
 
@@ -110,28 +108,6 @@ function random_hamiltonian(H::SymmetricFockHilbertSpace, β=2)
     Hermitian(cat(mats..., dims=(1, 2)))
 end
 
-
-struct LowRankMatrix{N,T} <: AbstractMatrix{T}
-    scales::Vector{T}
-    vecs1::NTuple{N,Vector{T}}
-    vecs2::NTuple{N,Vector{T}}
-end
-function LowRankMatrix(s, vs1, vs2)
-    T1 = promote_type(eltype.(vs1)...)
-    T2 = promote_type(eltype.(vs2)...)
-    T = promote_type(eltype(s), T1, T2)
-    N = length(vs1)
-    N == length(vs2) || throw(ArgumentError("Number of vectors must be the same"))
-    length(unique(length.(vs1))) == 1 || throw(ArgumentError("All vecs1 must have the same length"))
-    length(unique(length.(vs2))) == 1 || throw(ArgumentError("All vecs2 must have the same length"))
-    LowRankMatrix{N,T}(convert(Vector{T}, s), convert(NTuple{N,Vector{T}}, vs1), convert(NTuple{N,Vector{T}}, vs2))
-end
-Base.getindex(m::LowRankMatrix, i::Int, j::Int) = sum(s * v1[i] * conj(v2[j]) for (s, v1, v2) in zip(m.scales, m.vecs1, m.vecs2))
-Base.size(m::LowRankMatrix) = (length(first(m.vecs1)), length(first(m.vecs2)))
-Rank1Matrix(v1, v2) = LowRankMatrix([one(eltype(v1))], (v1,), (v2,))
-Base.:+(m1::LowRankMatrix{N1,T1}, m2::LowRankMatrix{N2,T2}) where {N1,T1,N2,T2} = LowRankMatrix{N1 + N2,promote_type(T1, T2)}(vcat(m1.scales, m2.scales), (m1.vecs1..., m2.vecs1...), (m1.vecs2..., m2.vecs2...))
-Base.:*(a::Number, m::LowRankMatrix) = LowRankMatrix(a * m.scales, m.vecs1, m.vecs2)
-Base.adjoint(m::LowRankMatrix{N,T}) where {N,T} = LowRankMatrix{N,T}(conj(m.scales), m.vecs2, m.vecs1)
 
 function abs_sign_mat!(m::Hermitian{T}; cutoff=10eps(real(T))) where T
     vals, vecs = eigen!(m)
@@ -159,7 +135,7 @@ end
 function optimal_gauge(oeR, ::FrobeniusGauge, q)
     γ = Hermitian(oeR + hc)
     γtilde = Hermitian(1im * oeR + hc)
-    θ = 1 / 2 * atan(2 * real(tr(γ * γtilde)) / (norm(γ)^2 - norm(γtilde)^2))
+    θ = 1 / 2 * atan(2 * real(tr(γ * γtilde)), norm(γ)^2 - norm(γtilde)^2)
 
     if norm(exp(1im * θ) * oeR + hc) > norm(exp(1im * (θ + pi / 2)) * oeR + hc)
         θ = minimum(abs, (θ + pi / 2, θ - pi / 2))
@@ -173,9 +149,9 @@ function optimal_gauge(oeR, ::EigGauge, q)
 end
 
 function reduced_majoranas_properties(e, o, H::AbstractHilbertSpace, Hsub::AbstractHilbertSpace, gauge=FrobeniusGauge(); q=1, opt_kwargs=Dict())
-    eo = Rank1Matrix(e, o)
-    ee = Rank1Matrix(e, e)
-    oo = Rank1Matrix(o, o)
+    eo = LowRankMatrix(e, conj(o))
+    ee = LowRankMatrix(e, conj(e))
+    oo = LowRankMatrix(o, conj(o))
     eoR = partial_trace(eo, H => Hsub)
     eeR = partial_trace(ee, H => Hsub)
     ooR = partial_trace(oo, H => Hsub)
@@ -290,4 +266,58 @@ function optimized_μ(H; μ, t, Δ, U, tol)
     deg_fun = degeneracy_fun_μ(c, H; μ, t, Δ, U, tol)
     prob = ZeroProblem(deg_fun, zero(μ))
     solve(prob; rtol=tol)
+end
+
+
+function calculate_bounds(hamiltonians, spaces, q)
+    @unpack HS = spaces
+    canon_hams = canonicalize_hamiltonians(hamiltonians, spaces)
+    @unpack hS0, hS, hB, hRB = canon_hams
+    _, vecs = ground_states_arnoldi(hS0, HS)
+    gs_odd = vcat(vecs[1], zero(vecs[2]))
+    gs_even = vcat(zero(vecs[1]), vecs[2])
+
+    reduced = reduced_majoranas_properties(gs_even, gs_odd, HS, HR, FrobeniusGauge(); q)
+    return calculate_bounds(reduced, hamiltonians, spaces, q)
+end
+
+function calculate_bounds(reduced, hamiltonians, spaces, q)
+    @unpack HS, HB, HR, HSB, HRB = spaces
+    p = conjugate_norm(q)
+    canon_hams = canonicalize_hamiltonians(hamiltonians, spaces)
+    @unpack hS0, hS, hB, hRB = canon_hams
+    heff = effective_hamiltonian(canon_hams, spaces, (reduced.γmin, reduced.γmax))
+    if abs(heff.effops.ε) > 1e-6
+        @warn "ε > 1e-6" (heff.effops.ε)
+    end
+    odd_coupling, even_coupling = decompose_coupling(hRB, HRB, HR, HB)
+    vals_full, vecs_full = blockeigen(Hermitian(embed(hS0, HS => HSB; complement=HB) + embed(hRB, HRB => HSB) + embed(hB, HB => HSB; complement=HS)), HSB)
+    vals, vecs = blockeigen(Hermitian(heff.total_ham), spaces.HgsB)
+    γeff = [embed(γ, spaces.Hgs => spaces.HgsB) for γ in heff.γgs]
+    γfull = [embed(γ, spaces.HS => spaces.HSB) for γ in (reduced.γmin, reduced.γmax)]
+    eff = calculate_bounds(reduced, vals, vecs, odd_coupling, even_coupling, γeff, spaces.Hgs, spaces.HB, spaces.HgsB, q, p)
+    full = calculate_bounds(reduced, vals_full, vecs_full, odd_coupling, even_coupling, γfull, spaces.HS, spaces.HB, spaces.HSB, q, p)
+    (; heff, eff, full)
+end
+
+function calculate_bounds(reduced, vals, vecs, odd_coupling, even_coupling, (γmin, γmax), HS, HB, HSB, q, p; dn=4)
+    n = div(size(vecs, 2), 2) # number of odd/even states
+    dn = min(dn, n)
+    even_norm = schatten_norm(even_coupling, p)
+    odd_norm = schatten_norm(odd_coupling, p)
+    odd_states, even_states = map(states -> states[:, 1:dn], vecs.blocks)
+    overlaps1 = abs.(odd_states' * γmin[1:n, n+1:2n] * even_states)
+    OEs = [E * O' for (O, E) in Base.product(eachcol(vecs[:, 1:dn]), eachcol(vecs[:, n+1:n+dn]))]
+    OEBnorms = [schatten_norm(partial_trace(OE, HSB => HB), q) for OE in OEs]
+    pairs = map(CartesianIndex, enumerate(map(v -> argmax(v), eachrow(overlaps1))))
+    δEs = map(es -> -(es...), Base.product(vals[1:dn], vals[n+1:n+dn]))
+    np_bound = (reduced.LD * even_norm .+ reduced.LFmin * odd_norm * OEBnorms) ./ overlaps1
+    np_bound_even = (reduced.LD * even_norm) ./ overlaps1
+    np_bound_odd = (reduced.LFmin * odd_norm * OEBnorms) ./ overlaps1
+    np_bounds = (; np_bound, np_bound_even, np_bound_odd)
+    p_bound = sqrt(dim(HB)) * (reduced.LD * even_norm + reduced.LFmin * odd_norm)
+    p_bound_LD = sqrt(dim(HB)) * (reduced.LD * even_norm)
+    p_bound_LF = sqrt(dim(HB)) * (reduced.LFmin * odd_norm)
+    p_bounds = (; p_bound, p_bound_LD, p_bound_LF)
+    (; δEs, p_bounds, np_bounds, even_norm, odd_norm, vals, vecs, pairs, overlaps1, OEBnorms)
 end
