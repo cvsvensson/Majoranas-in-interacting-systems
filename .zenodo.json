@@ -48,72 +48,22 @@
         }
     ],
     "version": "v2.0.0",
-    "custom": {
-        "code:codeRepository": "https://github.com/cvsvensson/Majoranas-in-interacting-systems",
-        "code:programmingLanguage": [
-            {
-                "id": "julia",
-                "title": {
-                    "en": "Julia"
-                }
-            }
-        ]
-    },
-    "resource_type": {
-        "title": "Software",
-        "type": "software"
-    },
     "license": {
-        "id": "mit-license"
+        "id": "MIT"
     },
     "grants": [
         {
-            "code": "856526",
-            "internal_id": "10.13039/501100000780::856526",
-            "funder": {
-                "name": "European Commission",
-                "doi": "10.13039/501100000780",
-                "acronym": "EC"
-            },
-            "title": "Foundations of nonlocal and nonabelian condensed-matter systems",
-            "acronym": "NONLOCAL",
-            "program": "H2020-EU.1.1.",
-            "url": "https://cordis.europa.eu/projects/856526"
+            "id": "10.13039/501100000780::856526"
         },
         {
-            "code": "101126636",
-            "internal_id": "10.13039/501100000780::101126636",
-            "funder": {
-                "name": "European Commission",
-                "doi": "10.13039/501100000780",
-                "acronym": "EC"
-            },
-            "title": "DSTrain - Data Science Postdoctoral Training Programme",
-            "acronym": "DSTrain",
-            "program": "HORIZON.1.2",
-            "url": "https://cordis.europa.eu/projects/101126636"
+            "id": "10.13039/501100000780::101126636"
         },
         {
-            "code": "101115315",
-            "internal_id": "10.13039/501100000780::101115315",
-            "funder": {
-                "name": "European Commission",
-                "doi": "10.13039/501100000780",
-                "acronym": "EC"
-            },
-            "title": "Quantum bits with Kitaev Transmons",
-            "acronym": "QuKiT",
-            "program": "HORIZON.3.1",
-            "url": "https://cordis.europa.eu/projects/101115315"
+            "id": "10.13039/501100000780::101115315"
         },
         {
-            "code": "OCENW.GROOT.2019.004",
-            "internal_id": "10.13039/501100003246::OCENW.GROOT.2019.004",
-            "funder": {
-                "name": "Dutch Research Council",
-                "doi": "10.13039/501100003246",
-                "acronym": "NWO"
-            }
+            "id": "10.13039/501100003246::OCENW.GROOT.2019.004"
         }
-    ]
+    ],
+    "upload_type": "software"
 }
